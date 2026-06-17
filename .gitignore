@@ -47,5 +47,7 @@ app.*.map.json
 # Release artifacts
 /dist/
 *.deb
+*.rpm
 *.apk
 *.ipa
+*.exe

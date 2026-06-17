@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=MindGrid
+Comment=Local and cloud AI assistant for Ollama and OpenAI APIs
+GenericName=AI Chat
+Exec=mindgrid
+Icon=com.mindgrid.mindgrid
+Terminal=false
+Type=Application
+Categories=Utility;Network;
+StartupWMClass=mindgrid
+Keywords=AI;Ollama;Chat;LLM;
