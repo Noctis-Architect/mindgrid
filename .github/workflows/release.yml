@@ -140,6 +140,7 @@ jobs:
 
       - name: Prepare release files
         run: |
+          VERSION="${{ needs.resolve-version.outputs.version }}"
           mkdir -p dist
           find artifacts -type f \( \
             -name '*.apk' -o \
@@ -149,40 +150,50 @@ jobs:
             -name '*.exe' \
           \) -exec cp {} dist/ \;
           ls -lh dist/
+          test -n "$(ls dist/MindGrid-${VERSION}-* 2>/dev/null)" || {
+            echo "No release artifacts found for version ${VERSION}"
+            exit 1
+          }
 
       - name: Generate release notes
         run: |
           VERSION="${{ needs.resolve-version.outputs.version }}"
-          cat > release-notes.md <<EOF
-          ## MindGrid ${VERSION}
-
-          First stable release of MindGrid — local and cloud AI assistant for Ollama and OpenAI-compatible APIs.
-
-          ### Downloads
-
-          | Platform | File | Install |
-          |----------|------|---------|
-          | Android | \`MindGrid-${VERSION}-android.apk\` | Sideload APK |
-          | Windows | \`MindGrid-${VERSION}-windows-setup.exe\` | Run installer |
-          | Linux (generic) | \`MindGrid-${VERSION}-linux-amd64.tar.gz\` | Extract and run \`bundle/mindgrid\` |
-          | Debian / Ubuntu | \`MindGrid-${VERSION}-linux-amd64.deb\` | \`sudo dpkg -i …\` |
-          | Fedora / RHEL | \`MindGrid-${VERSION}-linux-amd64.rpm\` | \`sudo dnf install …\` |
-
-          ### Checksums
-
-          \`\`\`
-          $(cd dist && sha256sum MindGrid-${VERSION}-*)
-          \`\`\`
-          EOF
-
-      - name: Create or update GitHub Release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
           TAG="${{ needs.resolve-version.outputs.tag }}"
-          VERSION="${{ needs.resolve-version.outputs.version }}"
+          {
+            echo "## MindGrid ${VERSION}"
+            echo
+            echo "Release **${TAG}** — local and cloud AI assistant for Ollama and OpenAI-compatible APIs."
+            echo
+            echo "### Downloads"
+            echo
+            echo "| Platform | File | Install |"
+            echo "|----------|------|---------|"
+            echo "| Android | \`MindGrid-${VERSION}-android.apk\` | Sideload APK |"
+            echo "| Windows | \`MindGrid-${VERSION}-windows-setup.exe\` | Run installer |"
+            echo "| Linux (generic) | \`MindGrid-${VERSION}-linux-amd64.tar.gz\` | Extract and run \`bundle/mindgrid\` |"
+            echo "| Debian / Ubuntu | \`MindGrid-${VERSION}-linux-amd64.deb\` | \`sudo dpkg -i …\` |"
+            echo "| Fedora / RHEL | \`MindGrid-${VERSION}-linux-amd64.rpm\` | \`sudo dnf install …\` |"
+            echo
+            echo "### Checksums"
+            echo
+            echo '```'
+            (cd dist && sha256sum MindGrid-"${VERSION}"-*)
+            echo '```'
+          } > release-notes.md
+          cat release-notes.md
 
-          gh release view "$TAG" 2>/dev/null || \
-            gh release create "$TAG" --title "MindGrid $VERSION" --notes-file release-notes.md
-
-          gh release upload "$TAG" dist/MindGrid-"${VERSION}"-* --clobber
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.resolve-version.outputs.tag }}
+          name: MindGrid ${{ needs.resolve-version.outputs.version }}
+          body_path: release-notes.md
+          files: |
+            dist/MindGrid-${{ needs.resolve-version.outputs.version }}-android.apk
+            dist/MindGrid-${{ needs.resolve-version.outputs.version }}-linux-amd64.tar.gz
+            dist/MindGrid-${{ needs.resolve-version.outputs.version }}-linux-amd64.deb
+            dist/MindGrid-${{ needs.resolve-version.outputs.version }}-linux-amd64.rpm
+            dist/MindGrid-${{ needs.resolve-version.outputs.version }}-windows-setup.exe
+          fail_on_unmatched_files: true
+          draft: false
+          prerelease: false
