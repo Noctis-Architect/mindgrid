@@ -120,7 +120,6 @@ class AppTheme {
           TargetPlatform.linux: FadeForwardsPageTransitionsBuilder(),
           TargetPlatform.windows: FadeForwardsPageTransitionsBuilder(),
           TargetPlatform.macOS: FadeForwardsPageTransitionsBuilder(),
-          TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
         },
       ),
       appBarTheme: const AppBarTheme(
