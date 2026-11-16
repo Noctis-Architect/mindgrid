@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 
+import 'core/motion.dart';
+import 'core/window_chrome.dart';
 import 'l10n/app_locale.dart';
 import 'l10n/app_strings.dart';
 import 'screens/home_screen.dart';
@@ -9,6 +11,7 @@ import 'state/app_state.dart';
 import 'theme/app_theme.dart';
 import 'widgets/app_logo.dart';
 import 'widgets/toast_overlay.dart';
+import 'widgets/window_title_bar.dart';
 
 class MindGridApp extends StatelessWidget {
   const MindGridApp({super.key});
@@ -42,22 +45,34 @@ class MindGridApp extends StatelessWidget {
             theme: AppTheme.dark(),
             builder: (context, child) {
               return ColoredBox(
-                color: AppColors.bgApp,
+                color: AppColors.bgSidebar,
                 child: Directionality(
                   textDirection: textDirection,
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
-                      child ?? const SizedBox.shrink(),
+                      Column(
+                        children: [
+                          if (WindowChrome.enabled) const WindowTitleBar(),
+                          Expanded(child: child ?? const SizedBox.shrink()),
+                        ],
+                      ),
                       const ToastOverlay(),
                     ],
                   ),
                 ),
               );
             },
-            home: shell.ready
-                ? const HomeScreen()
-                : _LoadingScreen(strings: state.strings),
+            home: AnimatedSwitcher(
+              duration: AppMotion.slow,
+              switchInCurve: AppMotion.emphasized,
+              child: shell.ready
+                  ? const HomeScreen(key: ValueKey('home'))
+                  : _LoadingScreen(
+                      key: const ValueKey('loading'),
+                      strings: state.strings,
+                    ),
+            ),
           );
         },
       ),
@@ -66,7 +81,7 @@ class MindGridApp extends StatelessWidget {
 }
 
 class _LoadingScreen extends StatelessWidget {
-  const _LoadingScreen({required this.strings});
+  const _LoadingScreen({super.key, required this.strings});
 
   final AppStrings strings;
 
@@ -75,22 +90,23 @@ class _LoadingScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.bgApp,
       body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const AppLogo(
-              size: 48,
-              borderRadius: 14,
-              padding: 6,
-            ),
-            const SizedBox(height: 16),
-            const CircularProgressIndicator(color: AppColors.accent),
-            const SizedBox(height: 12),
-            Text(
-              strings.loading,
-              style: const TextStyle(color: AppColors.text3),
-            ),
-          ],
+        child: FadeSlideIn(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const AppLogo(size: 56, borderRadius: 16, padding: 0),
+              const SizedBox(height: 22),
+              const SizedBox(
+                width: 120,
+                child: SmoothProgressBar(height: 3),
+              ),
+              const SizedBox(height: 14),
+              Text(
+                strings.loading,
+                style: const TextStyle(color: AppColors.text3, fontSize: 12.5),
+              ),
+            ],
+          ),
         ),
       ),
     );

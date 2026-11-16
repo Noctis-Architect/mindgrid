@@ -14,6 +14,7 @@ import 'package:provider/provider.dart';
 import '../core/file_picker_utils.dart';
 import '../core/platform_file_picker.dart';
 import '../core/hover_surface.dart';
+import '../core/motion.dart';
 import '../core/text_direction.dart';
 import '../l10n/l10n.dart';
 import '../models/chat_models.dart';
@@ -36,11 +37,28 @@ class ChatInputAreaState extends State<ChatInputArea> {
   bool _dragOver = false;
   bool _recording = false;
   bool _recorderBusy = false;
+  bool _dictating = false;
   int _recordSeconds = 0;
   Timer? _recordTimer;
 
   @override
+  void initState() {
+    super.initState();
+    _focus.addListener(() {
+      if (mounted) setState(() {});
+    });
+    final whisper = context.read<AppState>().whisper;
+    whisper.addListener(_onWhisper);
+    whisper.load();
+  }
+
+  void _onWhisper() {
+    if (mounted) setState(() {});
+  }
+
+  @override
   void dispose() {
+    context.read<AppState>().whisper.removeListener(_onWhisper);
     _recordTimer?.cancel();
     _recorder.dispose();
     _controller.dispose();
@@ -184,6 +202,35 @@ class ChatInputAreaState extends State<ChatInputArea> {
         _recordTimer?.cancel();
         _recordTimer = null;
         if (!mounted) return;
+        if (_dictating) {
+          // Speech-to-text through whisper.cpp: the words land in the box.
+          setState(() {
+            _recording = false;
+            _recordSeconds = 0;
+          });
+          try {
+            final text = await state.whisper.transcribe(bytes);
+            if (!mounted) return;
+            if (text.isEmpty) {
+              state.showToast(s.speechNothingHeard, type: ToastType.info);
+            } else {
+              final current = _controller.text;
+              final joined = current.trim().isEmpty
+                  ? text
+                  : '${current.trimRight()} $text';
+              _controller.value = TextEditingValue(
+                text: joined,
+                selection: TextSelection.collapsed(offset: joined.length),
+              );
+              _focus.requestFocus();
+            }
+          } finally {
+            if (mounted) {
+              setState(() => _recorderBusy = false);
+            }
+          }
+          return;
+        }
         setState(() {
           _recording = false;
           _recordSeconds = 0;
@@ -213,10 +260,12 @@ class ChatInputAreaState extends State<ChatInputArea> {
       state.showToast(s.audioNotSupported, type: ToastType.err);
       return;
     }
-    if (!state.selectedModelSupportsAudio) {
-      state.showToast(s.selectAudioModel, type: ToastType.info);
+    final dictate = state.whisper.dictationReady;
+    if (!dictate && !state.selectedModelSupportsAudio) {
+      state.showToast(s.speechNeedSetup, type: ToastType.info);
       return;
     }
+    _dictating = dictate;
 
     setState(() => _recorderBusy = true);
     try {
@@ -231,7 +280,7 @@ class ChatInputAreaState extends State<ChatInputArea> {
       _recordTimer = Timer.periodic(const Duration(seconds: 1), (_) {
         if (!mounted) return;
         setState(() => _recordSeconds += 1);
-        if (_recordSeconds >= 30) {
+        if (_recordSeconds >= (_dictating ? 180 : 30)) {
           _toggleRecording();
         }
       });
@@ -305,24 +354,15 @@ class ChatInputAreaState extends State<ChatInputArea> {
 
     Widget content = Container(
       padding: EdgeInsets.fromLTRB(
-        mobile ? 10 : 16,
-        10,
-        mobile ? 10 : 16,
-        10 + MediaQuery.paddingOf(context).bottom,
+        mobile ? 10 : 24,
+        4,
+        mobile ? 10 : 24,
+        8,
       ),
-      decoration: BoxDecoration(
-        color: AppColors.bgApp,
-        border: Border(
-          top: BorderSide(
-            color: _dragOver
-                ? AppColors.accent.withValues(alpha: 0.5)
-                : AppColors.border,
-          ),
-        ),
-      ),
+      color: Colors.transparent,
       child: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 860),
+          constraints: const BoxConstraints(maxWidth: 820),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -360,17 +400,33 @@ class ChatInputAreaState extends State<ChatInputArea> {
               if (_recording)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 8),
-                  child: _RecordingBanner(seconds: _recordSeconds, label: s.recordingProgress),
+                  child: _RecordingBanner(
+                    seconds: _recordSeconds,
+                    limit: _dictating ? 180 : 30,
+                    label: s.recordingProgress,
+                  ),
                 ),
-              Container(
+              AnimatedContainer(
+                duration: AppMotion.base,
+                curve: AppMotion.curve,
                 decoration: BoxDecoration(
                   color: AppColors.bgPanel,
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(AppRadius.xl),
                   border: Border.all(
                     color: _dragOver
-                        ? AppColors.accent.withValues(alpha: 0.6)
-                        : AppColors.borderMd,
+                        ? AppColors.accent
+                        : _focus.hasFocus
+                            ? AppColors.borderFocus
+                            : AppColors.borderMd,
                   ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black
+                          .withValues(alpha: _focus.hasFocus ? 0.38 : 0.2),
+                      blurRadius: _focus.hasFocus ? 28 : 16,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -397,17 +453,17 @@ class ChatInputAreaState extends State<ChatInputArea> {
                           enabledBorder: InputBorder.none,
                           focusedBorder: InputBorder.none,
                           filled: false,
-                          contentPadding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+                          contentPadding: const EdgeInsets.fromLTRB(18, 16, 18, 2),
                         ),
                         style: const TextStyle(
                           color: AppColors.text1,
-                          fontSize: 14,
+                          fontSize: 14.5,
                           height: 1.55,
                         ),
                       ),
                     ),
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
+                      padding: const EdgeInsets.fromLTRB(10, 4, 10, 10),
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
@@ -432,11 +488,14 @@ class ChatInputAreaState extends State<ChatInputArea> {
                                   : s.thinkingOff,
                               active: state.settings.thinkEnabled,
                             ),
-                          if (state.isOllama && _recorder.isSupported)
+                          if (_recorder.isSupported &&
+                              (state.isOllama ||
+                                  state.whisper.dictationReady))
                             _MicButton(
                               recording: _recording,
                               busy: _recorderBusy,
-                              enabled: state.selectedModelSupportsAudio,
+                              enabled: state.selectedModelSupportsAudio ||
+                                  state.whisper.dictationReady,
                               onPressed: _toggleRecording,
                             ),
                           const Spacer(),
@@ -451,11 +510,11 @@ class ChatInputAreaState extends State<ChatInputArea> {
                   ],
                 ),
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 7),
               Text(
                 s.disclaimer,
                 style: const TextStyle(
-                  fontSize: 11,
+                  fontSize: 10.5,
                   color: AppColors.text4,
                 ),
                 textAlign: TextAlign.center,
@@ -526,40 +585,49 @@ class _SendButtonState extends State<_SendButton> {
 
   @override
   Widget build(BuildContext context) {
-    final color = widget.streaming ? AppColors.red : AppColors.accent;
     final canAct = widget.enabled;
+    final Color bg;
+    final Color fg;
+    if (!canAct) {
+      bg = AppColors.bgActive;
+      fg = AppColors.text4;
+    } else if (widget.streaming) {
+      bg = _hovered ? AppColors.red : AppColors.text1;
+      fg = _hovered ? Colors.white : AppColors.bgApp;
+    } else {
+      bg = _hovered ? AppColors.accentDim : AppColors.accent;
+      fg = Colors.white;
+    }
 
     return MouseRegion(
+      cursor: canAct ? SystemMouseCursors.click : SystemMouseCursors.basic,
       onEnter: canAct ? (_) => setState(() => _hovered = true) : null,
-      onExit: canAct ? (_) => setState(() => _hovered = false) : null,
-      child: GestureDetector(
-        onTap: canAct ? widget.onPressed : null,
+      onExit: (_) => setState(() => _hovered = false),
+      child: Pressable(
+        scale: 0.9,
+        enabled: canAct,
+        onTap: widget.onPressed,
         child: AnimatedContainer(
           duration: AppHover.duration,
           curve: AppHover.curve,
-          width: 34,
-          height: 34,
-          decoration: BoxDecoration(
-            color: canAct
-                ? (widget.streaming
-                    ? (_hovered ? AppColors.red.withValues(alpha: 0.85) : AppColors.red)
-                    : (_hovered ? AppColors.accentDim : AppColors.accent))
-                : AppColors.bgHover,
-            borderRadius: BorderRadius.circular(10),
-            boxShadow: canAct && _hovered
-                ? [
-                    BoxShadow(
-                      color: color.withValues(alpha: 0.35),
-                      blurRadius: 12,
-                      offset: const Offset(0, 3),
-                    ),
-                  ]
-                : null,
-          ),
-          child: Icon(
-            widget.streaming ? Icons.stop_rounded : Icons.arrow_upward_rounded,
-            size: 17,
-            color: canAct ? Colors.white : AppColors.text4,
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(color: bg, shape: BoxShape.circle),
+          child: AnimatedSwitcher(
+            duration: AppMotion.base,
+            switchInCurve: AppMotion.emphasized,
+            transitionBuilder: (child, a) => ScaleTransition(
+              scale: a,
+              child: FadeTransition(opacity: a, child: child),
+            ),
+            child: Icon(
+              widget.streaming
+                  ? Icons.stop_rounded
+                  : Icons.arrow_upward_rounded,
+              key: ValueKey(widget.streaming),
+              size: 18,
+              color: fg,
+            ),
           ),
         ),
       ),
@@ -617,7 +685,7 @@ class _MicButtonState extends State<_MicButton>
   @override
   Widget build(BuildContext context) {
     final active = widget.recording;
-    final color = active ? AppColors.red : AppColors.yellow;
+    final color = active ? AppColors.red : AppColors.text3;
     final canAct = widget.enabled && !widget.busy;
 
     return Tooltip(
@@ -633,22 +701,18 @@ class _MicButtonState extends State<_MicButton>
             builder: (context, child) {
               final glow = active ? 0.25 + _pulse.value * 0.35 : 0.0;
               return Container(
-                width: 34,
-                height: 34,
+                width: 31,
+                height: 31,
                 margin: const EdgeInsets.only(left: 2),
                 decoration: BoxDecoration(
                   color: active
                       ? AppColors.red.withValues(alpha: 0.15 + glow)
-                      : (canAct
-                          ? AppColors.yellow.withValues(alpha: 0.12)
-                          : AppColors.bgHover),
+                      : Colors.transparent,
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(
                     color: active
                         ? AppColors.red.withValues(alpha: 0.7)
-                        : (canAct
-                            ? AppColors.yellow.withValues(alpha: 0.45)
-                            : AppColors.border),
+                        : Colors.transparent,
                   ),
                   boxShadow: active
                       ? [
@@ -682,9 +746,14 @@ class _MicButtonState extends State<_MicButton>
 }
 
 class _RecordingBanner extends StatelessWidget {
-  const _RecordingBanner({required this.seconds, required this.label});
+  const _RecordingBanner({
+    required this.seconds,
+    required this.label,
+    this.limit = 30,
+  });
 
   final int seconds;
+  final int limit;
   final String label;
 
   @override
@@ -709,7 +778,7 @@ class _RecordingBanner extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           Text(
-            '$label ${seconds}s / 30s',
+            '$label ${seconds}s / ${limit}s',
             style: const TextStyle(
               color: AppColors.red,
               fontSize: 12,

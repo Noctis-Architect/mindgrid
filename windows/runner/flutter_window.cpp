@@ -1,6 +1,7 @@
 #include "flutter_window.h"
 
 #include <optional>
+#include <string>
 
 #include "flutter/generated_plugin_registrant.h"
 
@@ -27,6 +28,59 @@ bool FlutterWindow::OnCreate() {
   RegisterPlugins(flutter_controller_->engine());
   SetChildContent(flutter_controller_->view()->GetNativeWindow());
 
+  // Apply the caption-less frame computed in WM_NCCALCSIZE.
+  SetWindowPos(GetHandle(), nullptr, 0, 0, 0, 0,
+               SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE |
+                   SWP_FRAMECHANGED);
+
+  window_channel_ =
+      std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
+          flutter_controller_->engine()->messenger(), "mindgrid/window",
+          &flutter::StandardMethodCodec::GetInstance());
+  window_channel_->SetMethodCallHandler(
+      [this](const flutter::MethodCall<flutter::EncodableValue>& call,
+             std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>>
+                 result) {
+        HWND hwnd = GetHandle();
+        const std::string& method = call.method_name();
+        if (hwnd == nullptr) {
+          result->Error("no_window", "Window is not available");
+          return;
+        }
+        if (method == "startDrag") {
+          result->Success();
+          ReleaseCapture();
+          PostMessage(hwnd, WM_SYSCOMMAND, SC_MOVE | HTCAPTION, 0);
+        } else if (method == "startResize") {
+          WPARAM edge = WMSZ_BOTTOMRIGHT;
+          if (const auto* name = std::get_if<std::string>(call.arguments())) {
+            if (*name == "top") edge = WMSZ_TOP;
+            else if (*name == "bottom") edge = WMSZ_BOTTOM;
+            else if (*name == "left") edge = WMSZ_LEFT;
+            else if (*name == "right") edge = WMSZ_RIGHT;
+            else if (*name == "topLeft") edge = WMSZ_TOPLEFT;
+            else if (*name == "topRight") edge = WMSZ_TOPRIGHT;
+            else if (*name == "bottomLeft") edge = WMSZ_BOTTOMLEFT;
+          }
+          result->Success();
+          ReleaseCapture();
+          PostMessage(hwnd, WM_SYSCOMMAND, SC_SIZE | edge, 0);
+        } else if (method == "minimize") {
+          ShowWindow(hwnd, SW_MINIMIZE);
+          result->Success();
+        } else if (method == "toggleMaximize") {
+          ShowWindow(hwnd, IsZoomed(hwnd) ? SW_RESTORE : SW_MAXIMIZE);
+          result->Success();
+        } else if (method == "isMaximized") {
+          result->Success(flutter::EncodableValue(IsZoomed(hwnd) != 0));
+        } else if (method == "close") {
+          result->Success();
+          PostMessage(hwnd, WM_CLOSE, 0, 0);
+        } else {
+          result->NotImplemented();
+        }
+      });
+
   flutter_controller_->engine()->SetNextFrameCallback([&]() {
     this->Show();
   });
@@ -40,6 +94,7 @@ bool FlutterWindow::OnCreate() {
 }
 
 void FlutterWindow::OnDestroy() {
+  window_channel_ = nullptr;
   if (flutter_controller_) {
     flutter_controller_ = nullptr;
   }

@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Build MindGrid release artifacts: Linux (.tar.gz, .deb, .rpm) and Android (.apk).
+# Set SKIP_ANDROID=1 to build the Linux packages only.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -13,7 +14,9 @@ echo "==> MindGrid release build v${VERSION}"
 
 flutter pub get
 flutter build linux --release
-flutter build apk --release
+if [ "${SKIP_ANDROID:-0}" != "1" ]; then
+  flutter build apk --release
+fi
 
 mkdir -p "$DIST"
 rm -rf "$STAGING"
@@ -25,6 +28,15 @@ tar -czf "$TAR_OUT" -C build/linux/x64/release bundle
 echo "==> Packaging Linux .deb and .rpm"
 mkdir -p "$STAGING/opt/mindgrid"
 cp -a build/linux/x64/release/bundle/. "$STAGING/opt/mindgrid/"
+
+# Optional bundled whisper.cpp engine (speech-to-text), built by CI.
+if [ -x packaging/whisper/whisper-server ]; then
+  echo "==> Bundling whisper.cpp engine"
+  mkdir -p build/linux/x64/release/bundle/whisper "$STAGING/opt/mindgrid/whisper"
+  cp packaging/whisper/* build/linux/x64/release/bundle/whisper/
+  cp packaging/whisper/* "$STAGING/opt/mindgrid/whisper/"
+  tar -czf "$TAR_OUT" -C build/linux/x64/release bundle
+fi
 
 mkdir -p "$STAGING/usr/share/applications"
 cp packaging/linux/com.mindgrid.mindgrid.desktop "$STAGING/usr/share/applications/"
@@ -84,8 +96,10 @@ fi
 
 rm -rf "$STAGING"
 
-APK_OUT="$DIST/MindGrid-${VERSION}-android.apk"
-cp build/app/outputs/flutter-apk/app-release.apk "$APK_OUT"
+if [ "${SKIP_ANDROID:-0}" != "1" ]; then
+  APK_OUT="$DIST/MindGrid-${VERSION}-android.apk"
+  cp build/app/outputs/flutter-apk/app-release.apk "$APK_OUT"
+fi
 
 echo ""
 echo "Release artifacts:"

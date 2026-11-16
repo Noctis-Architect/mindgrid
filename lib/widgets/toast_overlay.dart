@@ -14,19 +14,34 @@ class ToastOverlay extends StatelessWidget {
       selector: (_, state) => state.toast,
       builder: (context, toast, _) {
         return IgnorePointer(
-          ignoring: toast == null,
-          child: AnimatedOpacity(
-            opacity: toast == null ? 0 : 1,
-            duration: const Duration(milliseconds: 150),
-            child: toast == null
-                ? const SizedBox.shrink()
-                : Align(
-                    alignment: Alignment.bottomCenter,
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                      child: _ToastBanner(toast: toast),
-                    ),
+          child: Align(
+            alignment: Alignment.bottomCenter,
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(
+                16,
+                0,
+                16,
+                28 + MediaQuery.paddingOf(context).bottom,
+              ),
+              child: AnimatedSwitcher(
+                duration: AppMotion.base,
+                switchInCurve: AppMotion.emphasized,
+                switchOutCurve: Curves.easeInCubic,
+                transitionBuilder: (child, animation) => FadeTransition(
+                  opacity: animation,
+                  child: SlideTransition(
+                    position: Tween<Offset>(
+                      begin: const Offset(0, 0.6),
+                      end: Offset.zero,
+                    ).animate(animation),
+                    child: child,
                   ),
+                ),
+                child: toast == null
+                    ? const SizedBox.shrink()
+                    : _ToastBanner(key: ValueKey(toast), toast: toast),
+              ),
+            ),
           ),
         );
       },
@@ -35,52 +50,50 @@ class ToastOverlay extends StatelessWidget {
 }
 
 class _ToastBanner extends StatelessWidget {
-  const _ToastBanner({required this.toast});
+  const _ToastBanner({super.key, required this.toast});
 
   final ToastMessage toast;
 
   @override
   Widget build(BuildContext context) {
     final (iconColor, icon) = switch (toast.type) {
-      ToastType.ok => (AppColors.green, Icons.check_circle_outline_rounded),
-      ToastType.err => (AppColors.red, Icons.error_outline_rounded),
-      ToastType.info => (AppColors.text3, Icons.info_outline_rounded),
+      ToastType.ok => (AppColors.green, Icons.check_circle_rounded),
+      ToastType.err => (AppColors.red, Icons.error_rounded),
+      ToastType.info => (AppColors.text2, Icons.info_rounded),
     };
 
     return Material(
       color: Colors.transparent,
       child: Container(
-        constraints: const BoxConstraints(maxWidth: 420),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        constraints: const BoxConstraints(maxWidth: 460),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
         decoration: BoxDecoration(
-          color: AppColors.bgPanel,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: (toast.type == ToastType.info
-                    ? AppColors.borderMd
-                    : iconColor)
-                .withValues(alpha: 0.3),
-          ),
+          color: AppColors.bgElevated,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          border: Border.all(color: AppColors.borderMd),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.35),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
+              color: Colors.black.withValues(alpha: 0.45),
+              blurRadius: 24,
+              offset: const Offset(0, 10),
             ),
           ],
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 15, color: iconColor),
+            Icon(icon, size: 16, color: iconColor),
             const SizedBox(width: 10),
             Flexible(
               child: Text(
                 toast.text,
+                maxLines: 4,
+                overflow: TextOverflow.ellipsis,
                 textDirection: detectTextDirection(toast.text),
                 style: const TextStyle(
                   color: AppColors.text1,
                   fontSize: 13,
+                  height: 1.4,
                 ),
               ),
             ),

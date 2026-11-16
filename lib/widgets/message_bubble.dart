@@ -67,7 +67,7 @@ class _MessageBubbleState extends State<MessageBubble> {
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
       child: Padding(
-        padding: const EdgeInsets.only(bottom: 24),
+        padding: const EdgeInsets.only(bottom: 18),
         child: Column(
           crossAxisAlignment:
               alignRight ? CrossAxisAlignment.end : CrossAxisAlignment.start,
@@ -143,20 +143,7 @@ class _UserBubble extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: AppColors.bgMsgUser,
-        borderRadius: dir == TextDirection.rtl
-            ? const BorderRadius.only(
-                topLeft: Radius.circular(18),
-                topRight: Radius.circular(4),
-                bottomLeft: Radius.circular(18),
-                bottomRight: Radius.circular(18),
-              )
-            : const BorderRadius.only(
-                topLeft: Radius.circular(4),
-                topRight: Radius.circular(18),
-                bottomLeft: Radius.circular(18),
-                bottomRight: Radius.circular(18),
-              ),
-        border: Border.all(color: AppColors.borderMd),
+        borderRadius: BorderRadius.circular(18),
       ),
       child: Column(
         crossAxisAlignment: dir == TextDirection.rtl
@@ -311,8 +298,8 @@ class _AiContent extends StatelessWidget {
     final display = msg.content + (streaming ? ' ▍' : '');
     final textStyle = const TextStyle(
       color: AppColors.text1,
-      height: 1.7,
-      fontSize: 14,
+      height: 1.75,
+      fontSize: 14.5,
     );
 
     return Directionality(
@@ -392,62 +379,71 @@ class _ThinkingBlock extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final collapsed = hasContent && !expanded;
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.bgCode,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          InkWell(
-            onTap: hasContent ? onToggle : null,
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(10),
-              topRight: Radius.circular(10),
-              bottomLeft: Radius.circular(10),
-              bottomRight: Radius.circular(10),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        HoverSurface(
+          enabled: hasContent,
+          onTap: hasContent ? onToggle : null,
+          builder: (context, hovered) => AnimatedContainer(
+            duration: AppHover.duration,
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: hovered ? AppColors.bgHover : AppColors.bgPanel,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: AppColors.border),
             ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-              child: Row(
-                children: [
-                  const Icon(Icons.psychology_outlined,
-                      size: 14, color: AppColors.purple),
-                  const SizedBox(width: 7),
-                  Text(
-                    collapsed ? context.s.showThinking : context.s.hideThinking,
-                    style: const TextStyle(
-                        fontSize: 12, color: AppColors.text3),
-                  ),
-                  const Spacer(),
-                  Icon(
-                    collapsed ? Icons.expand_more : Icons.expand_less,
-                    size: 14,
-                    color: AppColors.text4,
-                  ),
-                ],
-              ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.psychology_alt_outlined,
+                    size: 14, color: AppColors.purple),
+                const SizedBox(width: 7),
+                Text(
+                  collapsed ? context.s.showThinking : context.s.hideThinking,
+                  style: const TextStyle(fontSize: 12, color: AppColors.text2),
+                ),
+                const SizedBox(width: 4),
+                AnimatedRotation(
+                  turns: collapsed ? 0 : 0.5,
+                  duration: AppMotion.base,
+                  curve: AppMotion.emphasized,
+                  child: const Icon(Icons.keyboard_arrow_down_rounded,
+                      size: 15, color: AppColors.text3),
+                ),
+              ],
             ),
           ),
-          if (!collapsed)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-              child: Text(
-                thinking,
-                textDirection: detectTextDirection(thinking),
-                textAlign: textAlignFor(thinking),
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: AppColors.text3,
-                  fontFamily: 'monospace',
-                  height: 1.6,
+        ),
+        AnimatedSize(
+          duration: AppMotion.slow,
+          curve: AppMotion.emphasized,
+          alignment: Alignment.topCenter,
+          child: collapsed
+              ? const SizedBox(width: double.infinity)
+              : Container(
+                  width: double.infinity,
+                  margin: const EdgeInsets.only(top: 8),
+                  padding: const EdgeInsetsDirectional.only(start: 12),
+                  decoration: const BoxDecoration(
+                    border: BorderDirectional(
+                      start: BorderSide(color: AppColors.borderMd, width: 2),
+                    ),
+                  ),
+                  child: Text(
+                    thinking,
+                    textDirection: detectTextDirection(thinking),
+                    textAlign: textAlignFor(thinking),
+                    style: const TextStyle(
+                      fontSize: 12.5,
+                      color: AppColors.text3,
+                      height: 1.65,
+                    ),
+                  ),
                 ),
-              ),
-            ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -615,8 +611,7 @@ class _AiAvatar extends StatelessWidget {
   Widget build(BuildContext context) {
     return AppLogo(
       size: 30,
-      borderRadius: 9,
-      padding: 4,
+      borderRadius: 15,
       streaming: streaming,
     );
   }
@@ -629,9 +624,8 @@ class _UserAvatar extends StatelessWidget {
       width: 30,
       height: 30,
       decoration: BoxDecoration(
-        color: AppColors.bgMsgUser,
-        borderRadius: BorderRadius.circular(9),
-        border: Border.all(color: AppColors.borderMd),
+        color: AppColors.bgActive,
+        borderRadius: BorderRadius.circular(15),
       ),
       child: Center(
         child: Text(

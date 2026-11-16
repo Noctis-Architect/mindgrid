@@ -179,6 +179,31 @@ Win32Window::MessageHandler(HWND hwnd,
                             WPARAM const wparam,
                             LPARAM const lparam) noexcept {
   switch (message) {
+    case WM_NCCALCSIZE: {
+      // MindGrid draws its own title bar: drop the system caption but keep
+      // the standard resize frame on the left, right and bottom edges.
+      if (wparam == TRUE) {
+        auto* params = reinterpret_cast<NCCALCSIZE_PARAMS*>(lparam);
+        const LONG original_top = params->rgrc[0].top;
+        const LRESULT result =
+            DefWindowProc(hwnd, WM_NCCALCSIZE, wparam, lparam);
+        if (result != 0) {
+          return result;
+        }
+        if (IsZoomed(hwnd)) {
+          // A maximized window overhangs the monitor by the frame thickness.
+          const UINT dpi = GetDpiForWindow(hwnd);
+          const int frame = GetSystemMetricsForDpi(SM_CYSIZEFRAME, dpi) +
+                            GetSystemMetricsForDpi(SM_CXPADDEDBORDER, dpi);
+          params->rgrc[0].top = original_top + frame;
+        } else {
+          params->rgrc[0].top = original_top;
+        }
+        return 0;
+      }
+      break;
+    }
+
     case WM_DESTROY:
       window_handle_ = nullptr;
       Destroy();

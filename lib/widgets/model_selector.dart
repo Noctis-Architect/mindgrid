@@ -6,175 +6,157 @@ import '../l10n/l10n.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 
+/// Compact model picker shown in the top bar.
 class ModelSelector extends StatelessWidget {
-  const ModelSelector({super.key});
+  const ModelSelector({super.key, this.onModelHub});
+
+  final VoidCallback? onModelHub;
+
+  static const _refresh = '\u0000refresh';
+  static const _hub = '\u0000hub';
 
   @override
   Widget build(BuildContext context) {
     final state = context.watch<AppState>();
     final s = context.s;
 
-    return Row(
-      children: [
-        Expanded(
-          child: PopupMenuButton<String>(
-            tooltip: s.selectModel,
-            offset: const Offset(0, 44),
-            color: AppColors.bgPanel,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-              side: const BorderSide(color: AppColors.borderMd),
+    return PopupMenuButton<String>(
+      tooltip: s.selectModel,
+      position: PopupMenuPosition.under,
+      offset: const Offset(0, 6),
+      constraints: const BoxConstraints(minWidth: 260, maxWidth: 380),
+      onSelected: (value) {
+        if (value == _refresh) {
+          state.fetchModels(scanNetwork: true);
+        } else if (value == _hub) {
+          onModelHub?.call();
+        } else {
+          state.selectModel(value);
+        }
+      },
+      itemBuilder: (context) => [
+        if (state.models.isEmpty)
+          PopupMenuItem(
+            enabled: false,
+            height: 40,
+            child: Text(
+              s.noModelsFound,
+              style: const TextStyle(color: AppColors.text4, fontSize: 13),
             ),
-            onSelected: state.selectModel,
-            itemBuilder: (context) {
-              if (state.models.isEmpty) {
-                return [
-                  PopupMenuItem(
-                    enabled: false,
-                    child: Text(
-                      s.noModelsFound,
-                      style: const TextStyle(
-                          color: AppColors.text4, fontSize: 13),
+          ),
+        for (final m in state.models)
+          PopupMenuItem(
+            value: m.name,
+            height: 40,
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    m.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: m.name == state.selectedModel
+                          ? AppColors.text1
+                          : AppColors.text2,
+                      fontWeight: m.name == state.selectedModel
+                          ? FontWeight.w600
+                          : FontWeight.w400,
                     ),
                   ),
-                ];
-              }
-              return state.models.map((m) {
-                final selected = m.name == state.selectedModel;
-                return PopupMenuItem(
-                  value: m.name,
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 14, vertical: 8),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          m.name,
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: selected
-                                ? AppColors.accent
-                                : AppColors.text1,
-                            fontWeight: selected
-                                ? FontWeight.w500
-                                : FontWeight.normal,
-                          ),
-                        ),
-                      ),
-                      if (selected)
-                        const Icon(Icons.check_rounded,
-                            size: 14, color: AppColors.accent),
-                    ],
-                  ),
-                );
-              }).toList();
-            },
-            child: _ModelDisplay(state: state),
-          ),
-        ),
-        const SizedBox(width: 4),
-        _RefreshButton(state: state),
-      ],
-    );
-  }
-}
-
-class _ModelDisplay extends StatelessWidget {
-  const _ModelDisplay({required this.state});
-  final AppState state;
-
-  @override
-  Widget build(BuildContext context) {
-    final s = context.s;
-    return HoverSurface(
-      cursor: SystemMouseCursors.click,
-      builder: (context, hovered) => HoverBox(
-        hovered: hovered,
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
-        borderRadius: BorderRadius.circular(10),
-        baseColor: AppColors.bgCode,
-        showBorder: true,
-        accentBorder: hovered,
-        child: Row(
-          children: [
-            Icon(
-              Icons.hub_outlined,
-              size: 13,
-              color: state.selectedModel.isNotEmpty
-                  ? (hovered ? AppColors.accent : AppColors.accentDim)
-                  : AppColors.text4,
+                ),
+                if (m.name == state.selectedModel)
+                  const Icon(Icons.check_rounded,
+                      size: 16, color: AppColors.accent),
+              ],
             ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                state.isDiscovering
-                    ? s.search
-                    : (state.selectedModel.isEmpty
-                        ? s.noModelSelected
-                        : state.selectedModel),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 12.5,
-                  color: hovered
-                      ? AppColors.text1
-                      : (state.selectedModel.isNotEmpty
-                          ? AppColors.text2
-                          : AppColors.text4),
+          ),
+        const PopupMenuDivider(height: 8),
+        PopupMenuItem(
+          value: _refresh,
+          height: 40,
+          child: _MenuAction(Icons.refresh_rounded, s.refreshModels),
+        ),
+        if (state.isOllama && onModelHub != null)
+          PopupMenuItem(
+            value: _hub,
+            height: 40,
+            child: _MenuAction(Icons.view_in_ar_outlined, s.ollamaManager),
+          ),
+      ],
+      child: HoverSurface(
+        builder: (context, hovered) => AnimatedContainer(
+          duration: AppHover.duration,
+          curve: AppHover.curve,
+          padding: const EdgeInsetsDirectional.fromSTEB(10, 7, 8, 7),
+          decoration: BoxDecoration(
+            color: hovered ? AppColors.bgHover : Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (state.isDiscovering)
+                const SizedBox(
+                  width: 13,
+                  height: 13,
+                  child: CircularProgressIndicator(strokeWidth: 1.6),
+                )
+              else
+                AnimatedContainer(
+                  duration: AppMotion.base,
+                  width: 7,
+                  height: 7,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: state.selectedModel.isEmpty
+                        ? AppColors.text4
+                        : AppColors.green,
+                  ),
+                ),
+              const SizedBox(width: 9),
+              Flexible(
+                child: Text(
+                  state.selectedModel.isEmpty
+                      ? s.noModelSelected
+                      : state.selectedModel,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: state.selectedModel.isEmpty
+                        ? AppColors.text3
+                        : AppColors.text1,
+                  ),
                 ),
               ),
-            ),
-            Icon(
-              Icons.unfold_more_rounded,
-              size: 14,
-              color: hovered ? AppColors.text2 : AppColors.text4,
-            ),
-          ],
+              const SizedBox(width: 4),
+              const Icon(Icons.keyboard_arrow_down_rounded,
+                  size: 18, color: AppColors.text3),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _RefreshButton extends StatelessWidget {
-  const _RefreshButton({required this.state});
-  final AppState state;
+class _MenuAction extends StatelessWidget {
+  const _MenuAction(this.icon, this.label);
+  final IconData icon;
+  final String label;
 
   @override
   Widget build(BuildContext context) {
-    if (state.isDiscovering) {
-      return Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: AppColors.bgCode,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: AppColors.border),
-        ),
-        child: const SizedBox(
-          width: 14,
-          height: 14,
-          child: CircularProgressIndicator(
-            strokeWidth: 1.5,
-            color: AppColors.accent,
-          ),
-        ),
-      );
-    }
-
-    return HoverSurface(
-      onTap: () => state.fetchModels(scanNetwork: true),
-      builder: (context, hovered) => HoverBox(
-        hovered: hovered,
-        padding: const EdgeInsets.all(8),
-        borderRadius: BorderRadius.circular(10),
-        baseColor: AppColors.bgCode,
-        showBorder: true,
-        child: Icon(
-          Icons.refresh_rounded,
-          size: 15,
-          color: hovered ? AppColors.accent : AppColors.text3,
-        ),
-      ),
+    return Row(
+      children: [
+        Icon(icon, size: 15, color: AppColors.text3),
+        const SizedBox(width: 10),
+        Text(label,
+            style: const TextStyle(fontSize: 13, color: AppColors.text2)),
+      ],
     );
   }
 }

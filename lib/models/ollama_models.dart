@@ -35,6 +35,43 @@ class OllamaLibraryModel {
   }
 }
 
+class InstalledModel {
+  const InstalledModel({
+    required this.name,
+    this.size = 0,
+    this.family,
+    this.parameterSize,
+    this.quantization,
+    this.modifiedAt,
+  });
+
+  final String name;
+  final int size;
+  final String? family;
+  final String? parameterSize;
+  final String? quantization;
+  final DateTime? modifiedAt;
+
+  factory InstalledModel.fromJson(Map<String, dynamic> json) {
+    final details = json['details'];
+    String? d(String key) {
+      if (details is! Map) return null;
+      final v = details[key]?.toString() ?? '';
+      return v.isEmpty ? null : v;
+    }
+
+    final size = json['size'];
+    return InstalledModel(
+      name: json['name']?.toString() ?? json['model']?.toString() ?? '',
+      size: size is num ? size.toInt() : 0,
+      family: d('family'),
+      parameterSize: d('parameter_size'),
+      quantization: d('quantization_level'),
+      modifiedAt: DateTime.tryParse(json['modified_at']?.toString() ?? ''),
+    );
+  }
+}
+
 class OllamaModelFamily {
   const OllamaModelFamily({
     required this.name,

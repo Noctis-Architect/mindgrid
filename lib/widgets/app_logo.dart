@@ -8,7 +8,7 @@ class AppLogo extends StatelessWidget {
     this.size = 60,
     this.borderRadius = 18,
     this.showBackground = true,
-    this.padding = 8,
+    this.padding = 0,
     this.streaming = false,
   });
 
@@ -20,39 +20,39 @@ class AppLogo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final inner = size - padding * 2;
     final image = ClipRRect(
       borderRadius: BorderRadius.circular(
-        showBackground ? borderRadius - 2 : borderRadius,
+        (borderRadius - padding).clamp(0, borderRadius),
       ),
       child: Image.asset(
         'assets/images/app_logo.jpg',
-        width: size - padding * 2,
-        height: size - padding * 2,
+        width: inner,
+        height: inner,
         fit: BoxFit.cover,
+        filterQuality: FilterQuality.medium,
       ),
     );
 
-    if (!showBackground) {
-      return SizedBox(
-        width: size,
-        height: size,
-        child: Padding(padding: EdgeInsets.all(padding), child: image),
-      );
-    }
-
-    return Container(
+    return AnimatedContainer(
+      duration: AppMotion.slow,
+      curve: AppMotion.curve,
       width: size,
       height: size,
+      padding: EdgeInsets.all(padding),
       decoration: BoxDecoration(
-        color: AppColors.bgHover,
+        color: showBackground ? AppColors.bgHover : Colors.transparent,
         borderRadius: BorderRadius.circular(borderRadius),
-        border: Border.all(
-          color: streaming
-              ? AppColors.accent.withValues(alpha: 0.5)
-              : AppColors.borderMd,
-        ),
+        boxShadow: streaming
+            ? [
+                BoxShadow(
+                  color: AppColors.accent.withValues(alpha: 0.45),
+                  blurRadius: 14,
+                ),
+              ]
+            : const [],
       ),
-      child: Padding(padding: EdgeInsets.all(padding), child: image),
+      child: image,
     );
   }
 }

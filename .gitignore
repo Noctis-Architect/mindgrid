@@ -51,3 +51,6 @@ app.*.map.json
 *.apk
 *.ipa
 *.exe
+
+# Locally built whisper.cpp engine
+packaging/whisper/

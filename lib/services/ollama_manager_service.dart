@@ -21,6 +21,7 @@ class OllamaManagerService {
   static const libraryPageUrl = 'https://ollama.com/library';
   static const windowsDownloadUrl =
       'https://github.com/ollama/ollama/releases/latest';
+  static const macDownloadUrl = 'https://ollama.com/download/mac';
   static const linuxInstallCmd =
       'curl -fsSL https://ollama.com/install.sh | sh';
 
@@ -42,6 +43,7 @@ class OllamaManagerService {
 
   bool get isDesktopLinux => !kIsWeb && Platform.isLinux;
   bool get isDesktopWindows => !kIsWeb && Platform.isWindows;
+  bool get isDesktopMac => !kIsWeb && Platform.isMacOS;
   bool get canAutoInstall => isDesktopLinux;
 
   Future<bool> isBinaryInstalled() async {
@@ -400,6 +402,180 @@ class OllamaManagerService {
           .toSet();
     } catch (_) {
       return {};
+    }
+  }
+
+  Future<List<InstalledModel>> fetchInstalledModels(AppSettings settings) async {
+    try {
+      final result = await _runtime.fetchOllama(
+        '/api/tags',
+        settings,
+        method: 'GET',
+        primaryUrl: settings.ollamaUrl,
+      );
+      final json = jsonDecode(utf8.decode(result.response.bodyBytes));
+      if (json is! Map || json['models'] is! List) return [];
+      final list = (json['models'] as List)
+          .whereType<Map>()
+          .map((m) => InstalledModel.fromJson(Map<String, dynamic>.from(m)))
+          .where((m) => m.name.isNotEmpty)
+          .toList()
+        ..sort((a, b) => a.name.compareTo(b.name));
+      return list;
+    } catch (_) {
+      return [];
+    }
+  }
+
+  /// `/api/show` for an installed model (template, parameters, modelfile…).
+  Future<Map<String, dynamic>> showModel(
+    String model,
+    AppSettings settings,
+  ) async {
+    final result = await _runtime.fetchOllama(
+      '/api/show',
+      settings,
+      method: 'POST',
+      body: jsonEncode({'model': model}),
+      primaryUrl: settings.ollamaUrl,
+      preferKnownBase: true,
+    );
+    final json = jsonDecode(utf8.decode(result.response.bodyBytes));
+    return json is Map ? Map<String, dynamic>.from(json) : {};
+  }
+
+  /// Resolves the Ollama base URL that is actually reachable right now.
+  Future<String> resolveBase(AppSettings settings) async {
+    final result = await _runtime.fetchOllama(
+      '/api/version',
+      settings,
+      method: 'GET',
+      primaryUrl: settings.ollamaUrl,
+      preferKnownBase: true,
+      timeout: const Duration(seconds: 8),
+    );
+    return result.base.replaceAll(RegExp(r'/+$'), '');
+  }
+
+  Map<String, String> _authOnly(AppSettings settings) {
+    final headers = Map<String, String>.from(_runtime.jsonAuthHeaders(settings));
+    headers.removeWhere((k, _) {
+      final key = k.toLowerCase();
+      return key == 'content-type' || key == 'accept';
+    });
+    return headers;
+  }
+
+  Future<bool> blobExists(
+    String base,
+    String digest,
+    AppSettings settings,
+  ) async {
+    final client = createClientForBase(base);
+    try {
+      final req = http.Request('HEAD', Uri.parse('$base/api/blobs/$digest'))
+        ..headers.addAll(_authOnly(settings));
+      final res = await client.send(req).timeout(const Duration(seconds: 20));
+      await res.stream.drain<void>();
+      return res.statusCode == 200;
+    } finally {
+      client.close();
+    }
+  }
+
+  /// Streams a local file into Ollama's blob store. [digest] is
+  /// `sha256:<hex>`; Ollama verifies it and rejects mismatching content.
+  Future<void> uploadBlob({
+    required String base,
+    required String digest,
+    required File file,
+    required AppSettings settings,
+    void Function(int sent, int total)? onProgress,
+    void Function(void Function() abort)? onAbortHandle,
+  }) async {
+    final total = await file.length();
+    final client = createClientForBase(base);
+    onAbortHandle?.call(client.close);
+    try {
+      final req = http.StreamedRequest(
+        'POST',
+        Uri.parse('$base/api/blobs/$digest'),
+      )
+        ..headers.addAll(_authOnly(settings))
+        ..headers['Content-Type'] = 'application/octet-stream'
+        ..contentLength = total;
+
+      var sent = 0;
+      final pump = file.openRead().listen(
+        (chunk) {
+          sent += chunk.length;
+          req.sink.add(chunk);
+          onProgress?.call(sent, total);
+        },
+        onError: req.sink.addError,
+        onDone: req.sink.close,
+        cancelOnError: true,
+      );
+
+      try {
+        final res = await client.send(req);
+        final body = await res.stream.bytesToString();
+        if (res.statusCode != 201 && res.statusCode != 200) {
+          throw Exception(_runtime.formatFetchError(res.statusCode, body));
+        }
+      } finally {
+        await pump.cancel();
+      }
+    } finally {
+      client.close();
+    }
+  }
+
+  /// `POST /api/create`, yielding each status line. Throws on failure.
+  Stream<String> createModel({
+    required String base,
+    required Map<String, dynamic> body,
+    required AppSettings settings,
+    void Function(void Function() abort)? onAbortHandle,
+  }) async* {
+    final client = createClientForBase(base);
+    onAbortHandle?.call(client.close);
+    try {
+      final req = http.Request('POST', Uri.parse('$base/api/create'))
+        ..headers.addAll(_runtime.jsonAuthHeaders(settings))
+        ..body = jsonEncode(body);
+      final res = await client.send(req).timeout(const Duration(hours: 2));
+      if (!res.statusCode.toString().startsWith('2')) {
+        final text = await res.stream.bytesToString();
+        throw Exception(_runtime.formatFetchError(res.statusCode, text));
+      }
+      var buf = '';
+      var success = false;
+      await for (final chunk in res.stream.transform(utf8.decoder)) {
+        buf += chunk;
+        final lines = buf.split('\n');
+        buf = lines.removeLast();
+        for (final line in lines) {
+          final json = _decodePullLine(line);
+          if (json == null) continue;
+          final err = json['error']?.toString();
+          if (err != null && err.isNotEmpty) throw Exception(err);
+          final status = json['status']?.toString() ?? '';
+          if (status == 'success') success = true;
+          if (status.isNotEmpty) yield status;
+        }
+      }
+      final tail = _decodePullLine(buf);
+      if (tail != null) {
+        final err = tail['error']?.toString();
+        if (err != null && err.isNotEmpty) throw Exception(err);
+        final status = tail['status']?.toString() ?? '';
+        if (status == 'success') success = true;
+        if (status.isNotEmpty) yield status;
+      }
+      if (!success) throw Exception('Model creation did not complete');
+    } finally {
+      client.close();
     }
   }
 

@@ -8,7 +8,7 @@
 
 [![Flutter](https://img.shields.io/badge/Flutter-3.11+-02569B?logo=flutter&logoColor=white)](https://flutter.dev)
 [![Dart](https://img.shields.io/badge/Dart-3.11+-0175C2?logo=dart&logoColor=white)](https://dart.dev)
-[![Platform](https://img.shields.io/badge/Platform-Android%20%7C%20Linux%20%7C%20Windows-333333)]()
+[![Platform](https://img.shields.io/badge/Platform-Android%20%7C%20Linux%20%7C%20Windows%20%7C%20macOS-333333)]()
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)]()
 
 [فارسی](#-معرفی) · [English](#-overview)
@@ -32,7 +32,8 @@
 | 🤖 Android | ✅ |
 | 🐧 Linux | ✅ |
 | 🪟 Windows | ✅ |
-| 🍎 macOS / iOS | 🔜 |
+| 🍎 macOS (Intel + Apple Silicon) | ✅ |
+| 📱 iOS | 🔜 |
 
 ---
 
@@ -73,8 +74,17 @@
 ### 🏠 مدیریت Ollama
 - نصب خودکار روی Linux
 - pull / delete مدل‌ها با progress bar
+- **نصب GGUF محلی** — فایل دانلودشده را بدهید؛ متادیتا خوانده می‌شود و Modelfile درست (template، stop، پارامترها) ساخته می‌شود
+- **دانلود از Hugging Face** — لینک مخزن یا فایل؛ دانلود با pause/resume، پشتیبانی از mirror، پروکسی و token
+- دانلود منیجر سراسری (pull، Hugging Face، GGUF محلی) که با بستن پنجره متوقف نمی‌شود
 - راهنمای سخت‌افزار (RAM، VRAM، کوانتیزاسیون)
 - کشف و اتصال به Ollama روی شبکه محلی
+
+### 🎙️ گفتار به متن (whisper.cpp)
+- اجرای محلی مدل‌های Whisper با موتور `whisper-server` از whisper.cpp (همراه بسته‌های دسکتاپ)
+- دانلود مدل‌های ggml (tiny تا large-v3) یا افزودن فایل `.bin` دلخواه
+- دیکته با میکروفون در باکس پیام، و تبدیل فایل صوتی به متن
+- حالت «سرور دیگر» برای استفاده از whisper.cpp روی شبکه (مناسب اندروید)
 
 ### 💾 داده و بکاپ
 - SQLite محلی — چت‌ها و تنظیمات روی دستگاه
@@ -213,7 +223,8 @@ flutter test
 ## 🗺️ نقشه راه
 
 - [ ] کشف mDNS (`_ollama._tcp`)
-- [ ] پشتیبانی macOS / iOS
+- [x] پشتیبانی macOS
+- [ ] پشتیبانی iOS
 - [ ] signing release اندروید
 - [ ] همگام‌سازی بین دستگاه‌ها
 

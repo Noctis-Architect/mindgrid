@@ -4,9 +4,9 @@ import '../theme/app_theme.dart';
 
 /// Shared hover timing and decoration helpers.
 class AppHover {
-  static const duration = Duration(milliseconds: 200);
+  static const duration = Duration(milliseconds: 180);
   static const curve = Curves.easeOutCubic;
-  static const subtleScale = 1.006;
+  static const subtleScale = 1.0;
 
   static Color bg(bool hovered, {Color? base, Color? hover, bool active = false}) {
     if (active) return AppColors.bgActive;
@@ -17,7 +17,7 @@ class AppHover {
   static Color border(bool hovered, {bool active = false, bool accent = false}) {
     if (active) return AppColors.accent.withValues(alpha: 0.35);
     if (hovered && accent) return AppColors.accent.withValues(alpha: 0.3);
-    if (hovered) return AppColors.borderFocus;
+    if (hovered) return AppColors.borderMd;
     return AppColors.border;
   }
 
@@ -25,14 +25,9 @@ class AppHover {
     if (!hovered || !elevated) return null;
     return [
       BoxShadow(
-        color: AppColors.accentGlow,
-        blurRadius: 16,
-        offset: const Offset(0, 4),
-      ),
-      BoxShadow(
-        color: Colors.black.withValues(alpha: 0.25),
-        blurRadius: 8,
-        offset: const Offset(0, 2),
+        color: Colors.black.withValues(alpha: 0.28),
+        blurRadius: 18,
+        offset: const Offset(0, 6),
       ),
     ];
   }
@@ -59,17 +54,31 @@ class HoverSurface extends StatefulWidget {
 
 class _HoverSurfaceState extends State<HoverSurface> {
   bool _hovered = false;
+  bool _pressed = false;
+
+  void _setPressed(bool v) {
+    if (mounted && _pressed != v) setState(() => _pressed = v);
+  }
 
   @override
   Widget build(BuildContext context) {
+    final tappable = widget.enabled && widget.onTap != null;
     return MouseRegion(
       cursor: widget.enabled ? widget.cursor : SystemMouseCursors.basic,
       onEnter: widget.enabled ? (_) => setState(() => _hovered = true) : null,
       onExit: widget.enabled ? (_) => setState(() => _hovered = false) : null,
       child: GestureDetector(
         onTap: widget.enabled ? widget.onTap : null,
+        onTapDown: tappable ? (_) => _setPressed(true) : null,
+        onTapUp: tappable ? (_) => _setPressed(false) : null,
+        onTapCancel: tappable ? () => _setPressed(false) : null,
         behavior: HitTestBehavior.opaque,
-        child: widget.builder(context, _hovered),
+        child: AnimatedScale(
+          scale: _pressed ? 0.975 : 1,
+          duration: const Duration(milliseconds: 110),
+          curve: Curves.easeOut,
+          child: widget.builder(context, _hovered),
+        ),
       ),
     );
   }
@@ -138,9 +147,7 @@ class HoverBox extends StatelessWidget {
       decoration: BoxDecoration(
         color: bg,
         borderRadius: borderRadius,
-        border: showBorder || hovered || active
-            ? Border.all(color: borderColor)
-            : null,
+        border: showBorder ? Border.all(color: borderColor) : null,
         boxShadow: AppHover.shadow(hovered, elevated: elevated),
       ),
       child: child,
@@ -206,13 +213,13 @@ class HoverIconButton extends StatelessWidget {
               ? AppColors.red.withValues(alpha: 0.35)
               : AppColors.borderMd;
         } else if (active) {
-          bg = AppColors.accent.withValues(alpha: 0.15);
+          bg = AppColors.accent.withValues(alpha: hovered ? 0.22 : 0.15);
           iconColor = AppColors.accent;
-          borderColor = AppColors.accent.withValues(alpha: 0.3);
+          borderColor = null;
         } else {
           bg = hovered ? AppColors.bgHover : Colors.transparent;
           iconColor = hovered ? AppColors.text1 : AppColors.text3;
-          borderColor = hovered ? AppColors.borderFocus : null;
+          borderColor = null;
         }
 
         return AnimatedContainer(
@@ -264,29 +271,19 @@ class HoverListItem extends StatelessWidget {
           hovered: hovered,
           active: active,
           margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-          borderRadius: BorderRadius.circular(8),
-          showBorder: highlight,
-          accentBorder: active,
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+          borderRadius: BorderRadius.circular(9),
           child: Row(
             children: [
-              AnimatedContainer(
+              TweenAnimationBuilder<Color?>(
+                tween: ColorTween(
+                  end: highlight ? AppColors.text1 : AppColors.text3,
+                ),
                 duration: AppHover.duration,
-                curve: AppHover.curve,
-                padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  color: highlight
-                      ? AppColors.accent.withValues(alpha: 0.1)
-                      : Colors.transparent,
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Icon(
-                  icon,
-                  size: 15,
-                  color: highlight ? AppColors.accent : AppColors.text3,
-                ),
+                builder: (context, color, _) =>
+                    Icon(icon, size: 16, color: color),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 11),
               Expanded(
                 child: AnimatedDefaultTextStyle(
                   duration: AppHover.duration,

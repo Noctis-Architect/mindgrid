@@ -36,7 +36,7 @@ class StringsFa extends AppStrings {
   @override
   String get backupExport => 'بکاپ / اکسپورت';
   @override
-  String get ollamaManager => 'مدیریت Ollama';
+  String get ollamaManager => 'مرکز مدل‌ها';
   @override
   String get promptEngineering => 'Prompt Engineering';
   @override
@@ -411,7 +411,7 @@ class StringsFa extends AppStrings {
   String get imageSaved => 'ذخیره شد ✓';
 
   @override
-  String get ollamaManagerTitle => 'مدیریت Ollama';
+  String get ollamaManagerTitle => 'مرکز مدل‌ها';
   @override
   String get refresh => 'بروزرسانی';
   @override
@@ -719,7 +719,7 @@ class StringsFa extends AppStrings {
   String get downloading => 'در حال دانلود…';
 
   @override
-  String get downloadingTab => 'در حال دانلود';
+  String get downloadingTab => 'دانلودها';
   @override
   String get noActiveDownloads => 'دانلودی در جریان نیست';
   @override
@@ -819,4 +819,318 @@ class StringsFa extends AppStrings {
 
   @override
   String fileAttachment(String name) => '\n\n--- فایل: $name ---\n';
+
+  @override
+  String get earlier =>
+      'قبل‌تر';
+  @override
+  String get toggleSidebar =>
+      'نمایش/پنهان‌کردن نوار کناری';
+  @override
+  String get searchChats =>
+      'جستجوی گفتگوها';
+  @override
+  String get noResults =>
+      'نتیجه‌ای پیدا نشد';
+  @override
+  String get hubImport =>
+      'نصب GGUF';
+  @override
+  String get clearFinished =>
+      'پاک‌کردن تمام‌شده‌ها';
+  @override
+  String get installOnMac =>
+      'نصب روی macOS';
+  @override
+  String get installMacSteps =>
+      '۱. Ollama را برای macOS دانلود کنید.\n۲. آن را به Applications منتقل و باز کنید.\n۳. Ollama در نوار منو در حال اجرا می‌ماند.\n۴. به اینجا برگردید و دکمه‌ی تازه‌سازی را بزنید.';
+  @override
+  String get downloadForMac =>
+      'دانلود برای macOS';
+  @override
+  String get stageHashing =>
+      'در حال بررسی فایل (SHA-256)…';
+  @override
+  String get stageUploading =>
+      'در حال ارسال به Ollama…';
+  @override
+  String get stageCreating =>
+      'در حال ساخت مدل…';
+  @override
+  String get reconnecting =>
+      'اتصال قطع شد — در حال اتصال دوباره…';
+  @override
+  String get modelName =>
+      'نام و تگ مدل';
+  @override
+  String get modelNameHint =>
+      'قالب: name:tag — حروف کوچک انگلیسی، عدد، نقطه، خط تیره و زیرخط.';
+  @override
+  String get modelNameInvalid =>
+      'نام نامعتبر است. از name:tag با حروف کوچک انگلیسی، عدد و . - _ استفاده کنید.';
+  @override
+  String get modelNameExists =>
+      'مدلی با این نام وجود دارد و جایگزین می‌شود.';
+  @override
+  String get chatFormat =>
+      'قالب گفتگو (Template)';
+  @override
+  String get formatAuto =>
+      'خودکار — Ollama قالب را از خود GGUF بخواند';
+  @override
+  String copyFromInstalled(String name) =>
+      'مثل مدل نصب‌شده: $name';
+  @override
+  String get formatNotDetected =>
+      'قالب گفتگو تشخیص داده نشد. دستی انتخاب کنید، وگرنه مدل ممکن است هذیان بگوید.';
+  @override
+  String detectedVia(String reason) =>
+      'تشخیص از روی $reason — قالب، توکن‌های توقف و پارامترها مطابق آن تنظیم شد.';
+  @override
+  String guessedVia(String reason) =>
+      'حدس از روی $reason — لطفاً بررسی کنید.';
+  @override
+  String get formatManual =>
+      'قالب به‌صورت دستی انتخاب شده است.';
+  @override
+  String get systemPromptOptional =>
+      'پرامپت سیستمی (اختیاری)';
+  @override
+  String get advancedOptions =>
+      'پیشرفته: قالب، توکن‌های توقف، پارامترها';
+  @override
+  String get modelfilePreview =>
+      'پیش‌نمایش Modelfile';
+  @override
+  String get back =>
+      'بازگشت';
+  @override
+  String get templateLabel =>
+      'قالب (Go Template)';
+  @override
+  String get templateAutoHint =>
+      'خالی — Ollama آن را از GGUF یا renderer پایین می‌گیرد.';
+  @override
+  String get stopSequences =>
+      'توکن‌های توقف (Stop)';
+  @override
+  String get addStop =>
+      'افزودن…';
+  @override
+  String get parametersLabel =>
+      'پارامترها';
+  @override
+  String get chooseGgufFile =>
+      'انتخاب فایل GGUF';
+  @override
+  String get notGgufFile =>
+      'این فایل به‌عنوان GGUF قابل خواندن نیست.';
+  @override
+  String get hfInvalidLink =>
+      'یک لینک Hugging Face یا owner/repo وارد کنید.';
+  @override
+  String get hfNoGguf =>
+      'هیچ فایل GGUF در این مخزن پیدا نشد.';
+  @override
+  String queuedToast(String name) =>
+      '$name به دانلودها اضافه شد';
+  @override
+  String get analyzingGguf =>
+      'در حال خواندن متادیتای GGUF…';
+  @override
+  String get installToOllama =>
+      'نصب روی Ollama';
+  @override
+  String get downloadAndInstall =>
+      'دانلود و نصب';
+  @override
+  String get importLocalTitle =>
+      'نصب از فایل GGUF';
+  @override
+  String get importLocalDesc =>
+      'فایل ‎.gguf که قبلاً دانلود کرده‌اید را انتخاب کنید. مایندگرید متادیتا را می‌خواند و Modelfile درست می‌سازد.';
+  @override
+  String get importLocalDescDrop =>
+      'فایل ‎.gguf را انتخاب کنید یا اینجا رها کنید. مایندگرید متادیتا را می‌خواند و Modelfile درست می‌سازد.';
+  @override
+  String get importHfTitle =>
+      'دانلود از Hugging Face';
+  @override
+  String get importHfDesc =>
+      'لینک مخزن یا فایل را بچسبانید. دانلود با قابلیت ادامه و سپس نصب خودکار.';
+  @override
+  String get hfConnection =>
+      'تنظیمات اتصال';
+  @override
+  String get hfFindFiles =>
+      'یافتن فایل‌ها';
+  @override
+  String get importHint =>
+      'قالب گفتگو، توکن‌های توقف و پارامترها از روی خود GGUF تشخیص داده می‌شوند و مثل مدل‌های رسمی کتابخانه‌ی Ollama نوشته می‌شوند — تا تگ‌های thinking، فراخوانی ابزار و توکن پایان نوبت درست کار کنند.';
+  @override
+  String get hfEndpoint =>
+      'آدرس Hub یا mirror';
+  @override
+  String get hfEndpointHelp =>
+      'اگر huggingface.co روی شبکه‌ی شما بسته است از mirror استفاده کنید.';
+  @override
+  String get hfProxy =>
+      'پروکسی HTTP (اختیاری)';
+  @override
+  String get hfProxyHelp =>
+      'مثلاً پورت HTTP/mixed کلاینت VPN شما.';
+  @override
+  String get hfToken =>
+      'توکن دسترسی (اختیاری)';
+  @override
+  String get hfTokenHelp =>
+      'فقط برای مخزن‌های خصوصی یا دارای مجوز لازم است.';
+  @override
+  String get hfKeepFile =>
+      'نگه‌داشتن فایل GGUF بعد از نصب';
+  @override
+  String get hfProjector =>
+      'پروژکتور تصویر';
+  @override
+  String get hfSplitUnsupported =>
+      'فایل چندتکه — پشتیبانی نمی‌شود';
+
+  @override
+  String get navChat =>
+      'گفتگو';
+  @override
+  String get navModels =>
+      'مدل‌ها';
+  @override
+  String get navSpeech =>
+      'گفتار';
+  @override
+  String get navImages =>
+      'تصویر';
+  @override
+  String get navPrompts =>
+      'پرامپت';
+  @override
+  String get downloadComplete =>
+      'دانلود کامل شد';
+  @override
+  String get speechTitle =>
+      'گفتار';
+  @override
+  String get speechSubtitle =>
+      'تبدیل گفتار به متن به‌صورت محلی با whisper.cpp';
+  @override
+  String get speechEngine =>
+      'موتور';
+  @override
+  String get speechLocal =>
+      'همین دستگاه';
+  @override
+  String get speechRemote =>
+      'سرور دیگر';
+  @override
+  String speechRunning(String model) =>
+      'در حال اجرا — مدل $model بارگذاری شده';
+  @override
+  String get speechStopped =>
+      'متوقف. با شروع موتور یا اولین دیکته، مدل بارگذاری می‌شود.';
+  @override
+  String get speechStarting =>
+      'در حال بارگذاری مدل…';
+  @override
+  String get speechStart =>
+      'بارگذاری مدل';
+  @override
+  String get speechStop =>
+      'خارج‌کردن از حافظه';
+  @override
+  String get speechBinaryNotFound =>
+      'موتور whisper.cpp (فایل whisper-server) روی این سیستم پیدا نشد.';
+  @override
+  String get speechBinaryHelp =>
+      'بسته‌های انتشار، موتور را همراه دارند. برای نصب دستی، whisper.cpp را بیلد کنید و فایل build/bin/whisper-server را انتخاب کنید:';
+  @override
+  String get speechChooseBinary =>
+      'انتخاب موتور…';
+  @override
+  String get speechRemoteUrl =>
+      'آدرس سرور whisper.cpp';
+  @override
+  String get speechRemoteHelp =>
+      'هر دستگاهی در شبکه که whisper-server روی آن اجراست. برای اندروید مناسب است.';
+  @override
+  String get speechTest =>
+      'تست';
+  @override
+  String get speechRemoteOk =>
+      'سرور در دسترس است.';
+  @override
+  String get speechRemoteFail =>
+      'اتصال به سرور ممکن نشد.';
+  @override
+  String get speechModels =>
+      'مدل‌های روی این دستگاه';
+  @override
+  String get speechNoModels =>
+      'هنوز مدلی ندارید — از پایین دانلود کنید یا یک فایل ggml ‎.bin اضافه کنید.';
+  @override
+  String get speechAddModelFile =>
+      'افزودن فایل مدل';
+  @override
+  String get speechCatalog =>
+      'دانلود مدل';
+  @override
+  String get speechCatalogHelp =>
+      'از Hugging Face (ggerganov/whisper.cpp) با همان تنظیمات اتصالِ بخش مدل‌ها ← نصب GGUF دانلود می‌شود. مدل بزرگ‌تر دقیق‌تر و کندتر است؛ نسخه‌های q5 کوچک‌تر و با کیفیت نزدیک‌اند.';
+  @override
+  String get speechOptions =>
+      'تنظیمات';
+  @override
+  String get speechLanguage =>
+      'زبان گفتار';
+  @override
+  String get speechLanguageHelp =>
+      'انتخاب دقیق زبان از تشخیص خودکار مطمئن‌تر است.';
+  @override
+  String get speechAuto =>
+      'تشخیص خودکار';
+  @override
+  String get speechTranslate =>
+      'ترجمه به انگلیسی';
+  @override
+  String get speechTranslateHelp =>
+      'هر زبانی گفته شود، متن انگلیسی برمی‌گرداند.';
+  @override
+  String get speechDictation =>
+      'دیکته در چت';
+  @override
+  String get speechDictationHelp =>
+      'میکروفونِ باکس پیام، گفته‌ی شما را تایپ می‌کند.';
+  @override
+  String get speechThreads =>
+      'تعداد thread پردازنده';
+  @override
+  String get speechRecord =>
+      'ضبط و تبدیل به متن';
+  @override
+  String get speechStopRecording =>
+      'در حال ضبط — برای پایان بزنید';
+  @override
+  String get speechPickAudio =>
+      'فایل صوتی';
+  @override
+  String get speechTranscribing =>
+      'در حال تبدیل به متن…';
+  @override
+  String get speechTryHint =>
+      'کاملاً روی دستگاه خودتان اجرا می‌شود.';
+  @override
+  String get speechNeedSetup =>
+      'ابتدا در بخش گفتار یک مدل whisper آماده کنید (یا مدل چتِ دارای ورودی صوت انتخاب کنید).';
+  @override
+  String get speechNothingHeard =>
+      'گفتاری تشخیص داده نشد.';
+  @override
+  String get speechTtsNote =>
+      'whisper.cpp فقط گفتار به متن است. تبدیل متن به گفتار موتور جداگانه‌ای می‌خواهد و در این نسخه نیست.';
 }

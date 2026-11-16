@@ -16,11 +16,13 @@ import '../services/image_generation_service.dart';
 import '../services/llm_client.dart';
 import '../services/local_http_client.dart';
 import '../services/model_capabilities.dart';
+import '../services/model_hub_controller.dart';
 import '../services/ollama_manager_service.dart';
 import '../services/ollama_runtime.dart';
 import '../services/prompt_builder.dart';
 import '../services/vision_message_builder.dart';
 import '../services/welcome_suggestions_service.dart';
+import '../services/whisper_service.dart';
 import '../data/welcome_content.dart';
 import '../models/welcome_suggestion.dart';
 
@@ -90,6 +92,28 @@ class AppState extends ChangeNotifier {
   final ChatExportService _chatExport;
   final ImageGenerationService _imageGen;
   final WelcomeSuggestionsService _welcomeSuggestions;
+
+  /// App-wide model install queue (pulls, Hugging Face, local GGUF).
+  late final ModelHubController hub = ModelHubController(
+    service: ollamaManager,
+    settings: () => settings,
+    onInstalled: (model) {
+      showToast(strings.modelInstalled(model), type: ToastType.ok);
+      fetchModels(silent: true, scanNetwork: false);
+    },
+    onFailed: (model, error) {
+      showToast('$model — ${strings.error(error)}', type: ToastType.err);
+    },
+    onWhisperModelReady: (path) async {
+      if (whisper.modelPath.isEmpty) whisper.modelPath = path;
+      await whisper.save();
+      await whisper.refresh();
+      showToast(strings.downloadComplete, type: ToastType.ok);
+    },
+  );
+
+  /// Local speech-to-text (whisper.cpp).
+  final WhisperService whisper = WhisperService();
 
   AppSettings settings = const AppSettings();
   AppLocale locale = AppLocale.en;
@@ -239,6 +263,8 @@ class AppState extends ChangeNotifier {
     _refreshTimer?.cancel();
     _streamSub?.cancel();
     _streamClient?.close();
+    hub.dispose();
+    whisper.dispose();
     super.dispose();
   }
 
@@ -251,7 +277,8 @@ class AppState extends ChangeNotifier {
   void showToast(String text, {ToastType type = ToastType.info}) {
     toast = ToastMessage(text, type: type);
     notifyListeners();
-    Future.delayed(const Duration(milliseconds: 1800), () {
+    final ms = type == ToastType.err ? 4200 : 2200;
+    Future.delayed(Duration(milliseconds: ms), () {
       if (toast?.text == text) {
         toast = null;
         notifyListeners();

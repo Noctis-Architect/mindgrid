@@ -36,7 +36,7 @@ class StringsEn extends AppStrings {
   @override
   String get backupExport => 'Backup / Export';
   @override
-  String get ollamaManager => 'Ollama Manager';
+  String get ollamaManager => 'Model Hub';
   @override
   String get promptEngineering => 'Prompt Engineering';
   @override
@@ -407,7 +407,7 @@ class StringsEn extends AppStrings {
   String get imageSaved => 'Saved ✓';
 
   @override
-  String get ollamaManagerTitle => 'Ollama Manager';
+  String get ollamaManagerTitle => 'Model Hub';
   @override
   String get refresh => 'Refresh';
   @override
@@ -713,7 +713,7 @@ class StringsEn extends AppStrings {
   String get downloading => 'Downloading…';
 
   @override
-  String get downloadingTab => 'Downloading';
+  String get downloadingTab => 'Downloads';
   @override
   String get noActiveDownloads => 'No downloads in progress';
   @override
@@ -815,4 +815,318 @@ class StringsEn extends AppStrings {
 
   @override
   String fileAttachment(String name) => '\n\n--- File: $name ---\n';
+
+  @override
+  String get earlier =>
+      'Earlier';
+  @override
+  String get toggleSidebar =>
+      'Toggle sidebar';
+  @override
+  String get searchChats =>
+      'Search chats';
+  @override
+  String get noResults =>
+      'No results';
+  @override
+  String get hubImport =>
+      'Import GGUF';
+  @override
+  String get clearFinished =>
+      'Clear finished';
+  @override
+  String get installOnMac =>
+      'Install on macOS';
+  @override
+  String get installMacSteps =>
+      '1. Download Ollama for macOS.\n2. Move it to Applications and open it.\n3. Ollama keeps running in the menu bar.\n4. Come back here and press refresh.';
+  @override
+  String get downloadForMac =>
+      'Download for macOS';
+  @override
+  String get stageHashing =>
+      'Verifying file (SHA-256)…';
+  @override
+  String get stageUploading =>
+      'Sending to Ollama…';
+  @override
+  String get stageCreating =>
+      'Building model…';
+  @override
+  String get reconnecting =>
+      'Connection lost — reconnecting…';
+  @override
+  String get modelName =>
+      'MODEL NAME & TAG';
+  @override
+  String get modelNameHint =>
+      'Format: name:tag — lowercase letters, digits, dot, dash, underscore.';
+  @override
+  String get modelNameInvalid =>
+      'Invalid name. Use name:tag with lowercase letters, digits, . - _';
+  @override
+  String get modelNameExists =>
+      'A model with this name exists and will be replaced.';
+  @override
+  String get chatFormat =>
+      'CHAT FORMAT';
+  @override
+  String get formatAuto =>
+      'Auto — let Ollama read the GGUF chat template';
+  @override
+  String copyFromInstalled(String name) =>
+      'Same as installed: $name';
+  @override
+  String get formatNotDetected =>
+      'Chat format could not be detected. Pick one manually or the model may ramble.';
+  @override
+  String detectedVia(String reason) =>
+      'Detected from $reason — template, stop tokens and parameters are set to match.';
+  @override
+  String guessedVia(String reason) =>
+      'Guessed from $reason — please double-check.';
+  @override
+  String get formatManual =>
+      'Manually selected format.';
+  @override
+  String get systemPromptOptional =>
+      'SYSTEM PROMPT (OPTIONAL)';
+  @override
+  String get advancedOptions =>
+      'Advanced: template, stop tokens, parameters';
+  @override
+  String get modelfilePreview =>
+      'MODELFILE PREVIEW';
+  @override
+  String get back =>
+      'Back';
+  @override
+  String get templateLabel =>
+      'TEMPLATE (GO TEMPLATE)';
+  @override
+  String get templateAutoHint =>
+      'Empty — Ollama derives it from the GGUF or the renderer below.';
+  @override
+  String get stopSequences =>
+      'STOP SEQUENCES';
+  @override
+  String get addStop =>
+      'Add stop…';
+  @override
+  String get parametersLabel =>
+      'PARAMETERS';
+  @override
+  String get chooseGgufFile =>
+      'Choose a GGUF file';
+  @override
+  String get notGgufFile =>
+      'This file could not be read as GGUF.';
+  @override
+  String get hfInvalidLink =>
+      'Enter a Hugging Face link or owner/repo.';
+  @override
+  String get hfNoGguf =>
+      'No GGUF files found in this repository.';
+  @override
+  String queuedToast(String name) =>
+      '$name added to downloads';
+  @override
+  String get analyzingGguf =>
+      'Reading GGUF metadata…';
+  @override
+  String get installToOllama =>
+      'Install to Ollama';
+  @override
+  String get downloadAndInstall =>
+      'Download & install';
+  @override
+  String get importLocalTitle =>
+      'Install from a GGUF file';
+  @override
+  String get importLocalDesc =>
+      'Pick a .gguf you already downloaded. MindGrid reads its metadata and builds a proper Modelfile.';
+  @override
+  String get importLocalDescDrop =>
+      'Pick or drop a .gguf you already downloaded. MindGrid reads its metadata and builds a proper Modelfile.';
+  @override
+  String get importHfTitle =>
+      'Download from Hugging Face';
+  @override
+  String get importHfDesc =>
+      'Paste a repo or file link. Resumable download, then automatic install.';
+  @override
+  String get hfConnection =>
+      'Connection';
+  @override
+  String get hfFindFiles =>
+      'Find files';
+  @override
+  String get importHint =>
+      'The chat template, stop tokens and sampling parameters are detected from the GGUF and written the way Ollama library models are built — so thinking tags, tool calls and end-of-turn tokens work correctly.';
+  @override
+  String get hfEndpoint =>
+      'Hub endpoint / mirror';
+  @override
+  String get hfEndpointHelp =>
+      'Use a mirror if huggingface.co is blocked on your network.';
+  @override
+  String get hfProxy =>
+      'HTTP proxy (optional)';
+  @override
+  String get hfProxyHelp =>
+      'e.g. the HTTP/mixed port of your VPN client.';
+  @override
+  String get hfToken =>
+      'Access token (optional)';
+  @override
+  String get hfTokenHelp =>
+      'Only needed for gated or private repositories.';
+  @override
+  String get hfKeepFile =>
+      'Keep the downloaded GGUF after installing';
+  @override
+  String get hfProjector =>
+      'vision projector';
+  @override
+  String get hfSplitUnsupported =>
+      'split file — not supported';
+
+  @override
+  String get navChat =>
+      'Chat';
+  @override
+  String get navModels =>
+      'Models';
+  @override
+  String get navSpeech =>
+      'Speech';
+  @override
+  String get navImages =>
+      'Images';
+  @override
+  String get navPrompts =>
+      'Prompts';
+  @override
+  String get downloadComplete =>
+      'Download complete';
+  @override
+  String get speechTitle =>
+      'Speech';
+  @override
+  String get speechSubtitle =>
+      'Local speech-to-text with whisper.cpp';
+  @override
+  String get speechEngine =>
+      'ENGINE';
+  @override
+  String get speechLocal =>
+      'This device';
+  @override
+  String get speechRemote =>
+      'Remote server';
+  @override
+  String speechRunning(String model) =>
+      'Running — model $model is loaded';
+  @override
+  String get speechStopped =>
+      'Stopped. The model loads when you start the engine or dictate.';
+  @override
+  String get speechStarting =>
+      'Loading model…';
+  @override
+  String get speechStart =>
+      'Load model';
+  @override
+  String get speechStop =>
+      'Unload';
+  @override
+  String get speechBinaryNotFound =>
+      'whisper.cpp engine (whisper-server) was not found on this system.';
+  @override
+  String get speechBinaryHelp =>
+      'Release packages bundle the engine. For a manual setup, build whisper.cpp and choose build/bin/whisper-server:';
+  @override
+  String get speechChooseBinary =>
+      'Choose engine…';
+  @override
+  String get speechRemoteUrl =>
+      'whisper.cpp server URL';
+  @override
+  String get speechRemoteHelp =>
+      'Any machine running `whisper-server` on your network. Useful on Android.';
+  @override
+  String get speechTest =>
+      'Test';
+  @override
+  String get speechRemoteOk =>
+      'Server is reachable.';
+  @override
+  String get speechRemoteFail =>
+      'Could not reach the server.';
+  @override
+  String get speechModels =>
+      'MODELS ON THIS DEVICE';
+  @override
+  String get speechNoModels =>
+      'No whisper model yet — download one below or add a ggml .bin file.';
+  @override
+  String get speechAddModelFile =>
+      'Add model file';
+  @override
+  String get speechCatalog =>
+      'DOWNLOAD A MODEL';
+  @override
+  String get speechCatalogHelp =>
+      'Downloaded from Hugging Face (ggerganov/whisper.cpp) using the connection settings in Models → Import GGUF. Bigger models are more accurate and slower; q5 variants are smaller with similar quality.';
+  @override
+  String get speechOptions =>
+      'OPTIONS';
+  @override
+  String get speechLanguage =>
+      'Spoken language';
+  @override
+  String get speechLanguageHelp =>
+      'Fixing the language is more reliable than auto-detect.';
+  @override
+  String get speechAuto =>
+      'Auto-detect';
+  @override
+  String get speechTranslate =>
+      'Translate to English';
+  @override
+  String get speechTranslateHelp =>
+      'Output English text whatever the spoken language.';
+  @override
+  String get speechDictation =>
+      'Dictate in chat';
+  @override
+  String get speechDictationHelp =>
+      'The microphone in the message box types what you say.';
+  @override
+  String get speechThreads =>
+      'CPU threads';
+  @override
+  String get speechRecord =>
+      'Record and transcribe';
+  @override
+  String get speechStopRecording =>
+      'Recording — tap to finish';
+  @override
+  String get speechPickAudio =>
+      'Audio file';
+  @override
+  String get speechTranscribing =>
+      'Transcribing…';
+  @override
+  String get speechTryHint =>
+      'Runs entirely on your machine.';
+  @override
+  String get speechNeedSetup =>
+      'Set up a whisper model in Speech first (or pick an audio-capable chat model).';
+  @override
+  String get speechNothingHeard =>
+      'No speech was recognised.';
+  @override
+  String get speechTtsNote =>
+      'whisper.cpp is speech-to-text only. Text-to-speech needs a different engine and is not part of this build.';
 }

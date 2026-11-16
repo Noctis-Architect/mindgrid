@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../core/hover_surface.dart';
-import '../core/text_direction.dart';
+import '../core/motion.dart';
 import '../l10n/app_locale.dart';
-import '../models/app_settings.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
+import 'model_selector.dart';
 
 class ChatTopBar extends StatelessWidget {
   const ChatTopBar({
@@ -15,59 +15,38 @@ class ChatTopBar extends StatelessWidget {
     required this.onPrompt,
     required this.onSettings,
     required this.onUserProfile,
+    this.onModelHub,
   });
 
+  /// Shown when the sidebar is hidden (mobile drawer or collapsed).
   final VoidCallback? onMenu;
   final VoidCallback onPrompt;
   final VoidCallback onSettings;
   final VoidCallback onUserProfile;
+  final VoidCallback? onModelHub;
 
-  void _showLanguageMenu(BuildContext context) {
+  Future<void> _confirmClear(BuildContext context) async {
     final state = context.read<AppState>();
     final s = state.strings;
-    final button = context.findRenderObject() as RenderBox?;
-    if (button == null || !button.hasSize) return;
-    final overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
-    final position = RelativeRect.fromRect(
-      Rect.fromPoints(
-        button.localToGlobal(Offset.zero, ancestor: overlay),
-        button.localToGlobal(button.size.bottomRight(Offset.zero),
-            ancestor: overlay),
-      ),
-      Offset.zero & overlay.size,
-    );
-    showMenu<AppLocale>(
+    final ok = await showAppDialog<bool>(
       context: context,
-      position: position,
-      color: AppColors.bgPanel,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      items: [
-        PopupMenuItem(
-          value: AppLocale.en,
-          child: Row(
-            children: [
-              if (state.locale == AppLocale.en)
-                const Icon(Icons.check, size: 16, color: AppColors.accent),
-              if (state.locale == AppLocale.en) const SizedBox(width: 8),
-              Text(s.languageEn),
-            ],
+      builder: (ctx) => AlertDialog(
+        title: Text(s.clearConversation),
+        content: Text(s.clearConversationConfirm),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(s.cancel),
           ),
-        ),
-        PopupMenuItem(
-          value: AppLocale.fa,
-          child: Row(
-            children: [
-              if (state.locale == AppLocale.fa)
-                const Icon(Icons.check, size: 16, color: AppColors.accent),
-              if (state.locale == AppLocale.fa) const SizedBox(width: 8),
-              Text(s.languageFa),
-            ],
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.red),
+            child: Text(s.clear),
           ),
-        ),
-      ],
-    ).then((value) {
-      if (value != null) state.setLocale(value);
-    });
+        ],
+      ),
+    );
+    if (ok == true) await state.clearCurrentChat();
   }
 
   @override
@@ -79,89 +58,80 @@ class ChatTopBar extends StatelessWidget {
     return Container(
       height: 54,
       padding: const EdgeInsets.symmetric(horizontal: 10),
-      decoration: const BoxDecoration(
-        color: AppColors.bgApp,
-        border: Border(bottom: BorderSide(color: AppColors.border)),
-      ),
       child: Row(
         children: [
-          if (onMenu != null)
-            _TopBarIconButton(
-              icon: Icons.menu_rounded,
-              onPressed: onMenu!,
-            ),
-          const SizedBox(width: 2),
+          AnimatedSize(
+            duration: AppMotion.base,
+            curve: AppMotion.emphasized,
+            child: onMenu == null
+                ? const SizedBox(height: 34)
+                : Padding(
+                    padding: const EdgeInsetsDirectional.only(end: 4),
+                    child: HoverIconButton(
+                      icon: mobile
+                          ? Icons.menu_rounded
+                          : Icons.view_sidebar_outlined,
+                      tooltip: s.toggleSidebar,
+                      iconSize: 18,
+                      onPressed: onMenu,
+                    ),
+                  ),
+          ),
           Expanded(
-            child: Text(
-              state.chatTitle(),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              textDirection: detectTextDirection(state.chatTitle()),
-              textAlign: TextAlign.start,
-              style: const TextStyle(
-                color: AppColors.text1,
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
+            child: Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 340),
+                child: ModelSelector(onModelHub: onModelHub),
               ),
             ),
           ),
+          const SizedBox(width: 8),
           if (!mobile) ...[
-            const SizedBox(width: 8),
-            _InfoPill(state.selectedModel),
-            const SizedBox(width: 4),
-            _InfoPill(state.settings.provider.label),
-            const SizedBox(width: 4),
+            if (state.hasPayloadOverride) ...[
+              const _InfoPill('custom payload', color: AppColors.yellow),
+              const SizedBox(width: 6),
+            ],
             _InfoPill(
-              '${state.contextSentCount()}/${state.settings.contextWindow}',
+              '${state.contextSentCount()} / ${state.settings.contextWindow}',
+              icon: Icons.layers_outlined,
               tooltip: s.contextWindow,
             ),
-            if (state.hasPayloadOverride) ...[
-              const SizedBox(width: 4),
-              _InfoPill('custom', color: AppColors.yellow),
-            ],
-            const SizedBox(width: 8),
+            const SizedBox(width: 6),
           ],
-          Builder(
-            builder: (btnContext) => _TopBarIconButton(
-              icon: Icons.language_rounded,
-              tooltip: s.language,
-              onPressed: () => _showLanguageMenu(btnContext),
-            ),
-          ),
-          _TopBarIconButton(
-            icon: Icons.delete_sweep_outlined,
-            tooltip: s.clearConversation,
-            onPressed: () async {
-              final ok = await showDialog<bool>(
-                context: context,
-                barrierColor: Colors.black54,
-                builder: (ctx) => AlertDialog(
-                  title: Text(s.clearConversation),
-                  content: Text(s.clearConversationConfirm),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(ctx, false),
-                      child: Text(s.cancel),
-                    ),
-                    FilledButton(
-                      onPressed: () => Navigator.pop(ctx, true),
-                      style: FilledButton.styleFrom(
-                          backgroundColor: AppColors.red),
-                      child: Text(s.clear),
-                    ),
-                  ],
+          PopupMenuButton<AppLocale>(
+            tooltip: s.language,
+            position: PopupMenuPosition.under,
+            onSelected: state.setLocale,
+            itemBuilder: (context) => [
+              for (final (locale, label) in [
+                (AppLocale.en, s.languageEn),
+                (AppLocale.fa, s.languageFa),
+              ])
+                PopupMenuItem(
+                  value: locale,
+                  height: 40,
+                  child: Row(
+                    children: [
+                      Expanded(child: Text(label)),
+                      if (state.locale == locale)
+                        const Icon(Icons.check_rounded,
+                            size: 16, color: AppColors.accent),
+                    ],
+                  ),
                 ),
-              );
-              if (ok == true) await state.clearCurrentChat();
-            },
+            ],
+            child: const _StaticIcon(Icons.translate_rounded),
+          ),
+          HoverIconButton(
+            icon: Icons.cleaning_services_outlined,
+            tooltip: s.clearConversation,
+            iconSize: 17,
+            onPressed: () => _confirmClear(context),
           ),
           if (mobile)
             PopupMenuButton<String>(
-              icon: const Icon(Icons.more_vert_rounded,
-                  size: 18, color: AppColors.text3),
-              color: AppColors.bgPanel,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
+              position: PopupMenuPosition.under,
               onSelected: (v) {
                 switch (v) {
                   case 'prompt':
@@ -173,85 +143,93 @@ class ChatTopBar extends StatelessWidget {
                 }
               },
               itemBuilder: (context) => [
-                PopupMenuItem(
-                    value: 'prompt', child: Text(s.promptEngineering)),
-                PopupMenuItem(value: 'profile', child: Text(s.userProfile)),
-                PopupMenuItem(value: 'settings', child: Text(s.settings)),
+                _menuItem('prompt', Icons.tune_rounded, s.promptEngineering),
+                _menuItem(
+                    'profile', Icons.person_outline_rounded, s.userProfile),
+                _menuItem('settings', Icons.settings_outlined, s.settings),
               ],
-            )
-          else ...[
-            _TopBarIconButton(
-              icon: Icons.tune_outlined,
-              tooltip: s.promptEngineering,
-              onPressed: onPrompt,
+              child: const _StaticIcon(Icons.more_horiz_rounded),
             ),
-            _TopBarIconButton(
-              icon: Icons.person_outline_rounded,
-              tooltip: s.userProfile,
-              onPressed: onUserProfile,
-            ),
-            _TopBarIconButton(
-              icon: Icons.settings_outlined,
-              tooltip: s.settings,
-              onPressed: onSettings,
-            ),
-          ],
+          if (!mobile) const SizedBox(width: 4),
+        ],
+      ),
+    );
+  }
+
+  PopupMenuItem<String> _menuItem(String value, IconData icon, String label) {
+    return PopupMenuItem(
+      value: value,
+      height: 42,
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: AppColors.text3),
+          const SizedBox(width: 10),
+          Text(label),
         ],
       ),
     );
   }
 }
 
-class _TopBarIconButton extends StatelessWidget {
-  const _TopBarIconButton({
-    required this.icon,
-    required this.onPressed,
-    this.tooltip,
-  });
-
+class _StaticIcon extends StatelessWidget {
+  const _StaticIcon(this.icon);
   final IconData icon;
-  final VoidCallback onPressed;
-  final String? tooltip;
 
   @override
   Widget build(BuildContext context) {
-    return HoverIconButton(
-      icon: icon,
-      onPressed: onPressed,
-      tooltip: tooltip,
-      iconSize: 17,
+    return HoverSurface(
+      builder: (context, hovered) => AnimatedContainer(
+        duration: AppHover.duration,
+        padding: const EdgeInsets.all(7),
+        decoration: BoxDecoration(
+          color: hovered ? AppColors.bgHover : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(
+          icon,
+          size: 17,
+          color: hovered ? AppColors.text1 : AppColors.text3,
+        ),
+      ),
     );
   }
 }
 
 class _InfoPill extends StatelessWidget {
-  const _InfoPill(this.text, {this.tooltip, this.color});
+  const _InfoPill(this.text, {this.tooltip, this.color, this.icon});
 
   final String text;
   final String? tooltip;
   final Color? color;
+  final IconData? icon;
 
   @override
   Widget build(BuildContext context) {
+    final c = color ?? AppColors.text3;
     final chip = Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
       decoration: BoxDecoration(
-        color: AppColors.bgHover,
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: AppColors.border),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.borderMd),
       ),
-      child: Text(
-        text,
-        style: TextStyle(
-          fontSize: 11,
-          color: color ?? AppColors.text3,
-          letterSpacing: 0.2,
-        ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null) ...[
+            Icon(icon, size: 12, color: c),
+            const SizedBox(width: 5),
+          ],
+          Text(
+            text,
+            style: TextStyle(
+              fontSize: 11,
+              color: c,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
+          ),
+        ],
       ),
     );
-    if (tooltip != null) {
-      return Tooltip(message: tooltip!, child: chip);
-    }
-    return chip;
+    return tooltip == null ? chip : Tooltip(message: tooltip!, child: chip);
   }
 }

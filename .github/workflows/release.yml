@@ -74,6 +74,17 @@ jobs:
             fakeroot ruby ruby-dev rubygems-integration build-essential rpm
           sudo gem install --no-document fpm
 
+      - name: Build whisper.cpp engine (bundled speech-to-text)
+        continue-on-error: true
+        run: |
+          git clone --depth 1 https://github.com/ggml-org/whisper.cpp.git "$RUNNER_TEMP/whisper.cpp"
+          cmake -S "$RUNNER_TEMP/whisper.cpp" -B "$RUNNER_TEMP/whisper.cpp/build" \
+            -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF -DWHISPER_BUILD_TESTS=OFF
+          cmake --build "$RUNNER_TEMP/whisper.cpp/build" -j --config Release --target whisper-server
+          mkdir -p packaging/whisper
+          cp "$RUNNER_TEMP/whisper.cpp/build/bin/whisper-server" packaging/whisper/
+          cp "$RUNNER_TEMP/whisper.cpp/LICENSE" packaging/whisper/LICENSE.whisper.cpp
+
       - name: Build Linux, Android, .deb, .rpm
         run: bash tool/build_release.sh "${{ needs.resolve-version.outputs.version }}"
 
@@ -109,6 +120,21 @@ jobs:
       - name: Build Windows release
         run: flutter build windows --release
 
+      - name: Bundle whisper.cpp engine (speech-to-text)
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          $out = "build/windows/x64/runner/Release/whisper"
+          New-Item -ItemType Directory -Force -Path $out | Out-Null
+          gh release download --repo ggml-org/whisper.cpp --pattern "whisper-bin-x64.zip" --dir $env:RUNNER_TEMP
+          Expand-Archive "$env:RUNNER_TEMP/whisper-bin-x64.zip" -DestinationPath "$env:RUNNER_TEMP/whisper" -Force
+          $server = Get-ChildItem "$env:RUNNER_TEMP/whisper" -Recurse -Filter "whisper-server.exe" | Select-Object -First 1
+          if (-not $server) { throw "whisper-server.exe not found in release archive" }
+          Copy-Item $server.FullName $out
+          Get-ChildItem $server.DirectoryName -Filter "*.dll" | Copy-Item -Destination $out
+        env:
+          GH_TOKEN: ${{ github.token }}
+
       - name: Install Inno Setup
         run: choco install innosetup -y
 
@@ -127,8 +153,71 @@ jobs:
           name: windows
           path: dist/MindGrid-${{ needs.resolve-version.outputs.version }}-windows-setup.exe
 
+  build-macos:
+    needs: resolve-version
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Sync pubspec version
+        run: |
+          VERSION="${{ needs.resolve-version.outputs.version }}"
+          BUILD="$(grep '^version:' pubspec.yaml | awk '{print $2}' | cut -d+ -f2)"
+          sed -i '' "s/^version:.*/version: ${VERSION}+${BUILD:-1}/" pubspec.yaml
+          grep '^version:' pubspec.yaml
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Build macOS release (universal)
+        run: |
+          flutter config --enable-macos-desktop
+          flutter pub get
+          flutter build macos --release
+
+      - name: Build whisper.cpp engine (bundled speech-to-text)
+        continue-on-error: true
+        run: |
+          git clone --depth 1 https://github.com/ggml-org/whisper.cpp.git "$RUNNER_TEMP/whisper.cpp"
+          cmake -S "$RUNNER_TEMP/whisper.cpp" -B "$RUNNER_TEMP/whisper.cpp/build" \
+            -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF -DWHISPER_BUILD_TESTS=OFF \
+            -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" -DCMAKE_OSX_DEPLOYMENT_TARGET=10.15
+          cmake --build "$RUNNER_TEMP/whisper.cpp/build" -j --config Release --target whisper-server
+          APP="$(find build/macos/Build/Products/Release -maxdepth 1 -name '*.app' | head -n 1)"
+          mkdir -p "$APP/Contents/Resources/whisper"
+          cp "$RUNNER_TEMP/whisper.cpp/build/bin/whisper-server" "$APP/Contents/Resources/whisper/"
+
+      - name: Package .dmg
+        run: |
+          VERSION="${{ needs.resolve-version.outputs.version }}"
+          APP="$(find build/macos/Build/Products/Release -maxdepth 1 -name '*.app' | head -n 1)"
+          test -d "$APP" || { echo "No .app bundle produced"; exit 1; }
+
+          # Ad-hoc sign so the unsigned build launches on Apple Silicon.
+          codesign --force --deep --sign - "$APP"
+
+          STAGE="$(mktemp -d)"
+          cp -R "$APP" "$STAGE/MindGrid.app"
+          ln -s /Applications "$STAGE/Applications"
+
+          mkdir -p dist
+          hdiutil create \
+            -volname "MindGrid ${VERSION}" \
+            -srcfolder "$STAGE" \
+            -ov -format UDZO \
+            "dist/MindGrid-${VERSION}-macos-universal.dmg"
+          ls -lh dist/
+
+      - name: Upload macOS disk image
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos
+          path: dist/MindGrid-${{ needs.resolve-version.outputs.version }}-macos-universal.dmg
+
   publish-release:
-    needs: [resolve-version, build-linux-android, build-windows]
+    needs: [resolve-version, build-linux-android, build-windows, build-macos]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -147,7 +236,8 @@ jobs:
             -name '*.deb' -o \
             -name '*.rpm' -o \
             -name '*.tar.gz' -o \
-            -name '*.exe' \
+            -name '*.exe' -o \
+            -name '*.dmg' \
           \) -exec cp {} dist/ \;
           ls -lh dist/
           test -n "$(ls dist/MindGrid-${VERSION}-* 2>/dev/null)" || {
@@ -170,6 +260,7 @@ jobs:
             echo "|----------|------|---------|"
             echo "| Android | \`MindGrid-${VERSION}-android.apk\` | Sideload APK |"
             echo "| Windows | \`MindGrid-${VERSION}-windows-setup.exe\` | Run installer |"
+            echo "| macOS (Intel + Apple Silicon) | \`MindGrid-${VERSION}-macos-universal.dmg\` | Open, drag to Applications. Unsigned: right-click → Open the first time |"
             echo "| Linux (generic) | \`MindGrid-${VERSION}-linux-amd64.tar.gz\` | Extract and run \`bundle/mindgrid\` |"
             echo "| Debian / Ubuntu | \`MindGrid-${VERSION}-linux-amd64.deb\` | \`sudo dpkg -i …\` |"
             echo "| Fedora / RHEL | \`MindGrid-${VERSION}-linux-amd64.rpm\` | \`sudo dnf install …\` |"
@@ -194,6 +285,7 @@ jobs:
             dist/MindGrid-${{ needs.resolve-version.outputs.version }}-linux-amd64.deb
             dist/MindGrid-${{ needs.resolve-version.outputs.version }}-linux-amd64.rpm
             dist/MindGrid-${{ needs.resolve-version.outputs.version }}-windows-setup.exe
+            dist/MindGrid-${{ needs.resolve-version.outputs.version }}-macos-universal.dmg
           fail_on_unmatched_files: true
           draft: false
           prerelease: false
