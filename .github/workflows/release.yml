@@ -60,6 +60,13 @@ jobs:
           sed -i "s/^version:.*/version: ${VERSION}+${BUILD:-1}/" pubspec.yaml
           grep '^version:' pubspec.yaml
 
+      # The Android Gradle build needs a JDK that Gradle 8.x supports; the
+      # runner default has moved past it.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
@@ -120,20 +127,23 @@ jobs:
       - name: Build Windows release
         run: flutter build windows --release
 
-      - name: Bundle whisper.cpp engine (speech-to-text)
+      - name: Build whisper.cpp engine (bundled speech-to-text)
         continue-on-error: true
         shell: pwsh
         run: |
+          $src = "$env:RUNNER_TEMP/whisper.cpp"
+          git clone --depth 1 https://github.com/ggml-org/whisper.cpp.git $src
+          cmake -S $src -B "$src/build" -A x64 -DBUILD_SHARED_LIBS=OFF -DWHISPER_BUILD_TESTS=OFF
+          if ($LASTEXITCODE -ne 0) { throw "whisper.cpp configure failed" }
+          cmake --build "$src/build" --config Release --target whisper-server -j
+          if ($LASTEXITCODE -ne 0) { throw "whisper.cpp build failed" }
+          $server = Get-ChildItem "$src/build" -Recurse -Filter "whisper-server.exe" | Select-Object -First 1
+          if (-not $server) { throw "whisper-server.exe was not produced" }
           $out = "build/windows/x64/runner/Release/whisper"
           New-Item -ItemType Directory -Force -Path $out | Out-Null
-          gh release download --repo ggml-org/whisper.cpp --pattern "whisper-bin-x64.zip" --dir $env:RUNNER_TEMP
-          Expand-Archive "$env:RUNNER_TEMP/whisper-bin-x64.zip" -DestinationPath "$env:RUNNER_TEMP/whisper" -Force
-          $server = Get-ChildItem "$env:RUNNER_TEMP/whisper" -Recurse -Filter "whisper-server.exe" | Select-Object -First 1
-          if (-not $server) { throw "whisper-server.exe not found in release archive" }
           Copy-Item $server.FullName $out
-          Get-ChildItem $server.DirectoryName -Filter "*.dll" | Copy-Item -Destination $out
-        env:
-          GH_TOKEN: ${{ github.token }}
+          Copy-Item "$src/LICENSE" "$out/LICENSE.whisper.cpp"
+          Get-ChildItem $out
 
       - name: Install Inno Setup
         run: choco install innosetup -y
